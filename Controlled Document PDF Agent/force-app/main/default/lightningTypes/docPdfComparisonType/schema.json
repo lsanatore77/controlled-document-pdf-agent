@@ -1,0 +1,5 @@
+{
+  "title": "Doc PDF Comparison Type",
+  "description": "The result of comparing a PDF with an existing Controlled Document",
+  "lightning:type": "@apexClassType/c__DocPdfComparisonView"
+}

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Comparison_JSON__c</fullName>
+    <label>Comparison</label>
+    <description>Compare mode: the verdict, reasons, section changes and suggestions, as JSON. Read by the comparison component.</description>
+    <type>LongTextArea</type>
+    <length>131072</length>
+    <visibleLines>6</visibleLines>
+    <trackTrending>false</trackTrending>
+</CustomField>

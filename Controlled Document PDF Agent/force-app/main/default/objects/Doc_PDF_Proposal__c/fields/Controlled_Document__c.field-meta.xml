@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Controlled_Document__c</fullName>
+    <label>Controlled Document</label>
+    <description>Compare mode: the existing Controlled Document whose Primary Content the PDF was compared with.</description>
+    <type>Lookup</type>
+    <referenceTo>compliancequest__SQX_Controlled_Document__c</referenceTo>
+    <relationshipName>Doc_PDF_Proposals</relationshipName>
+    <relationshipLabel>Doc PDF Proposals</relationshipLabel>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+</CustomField>

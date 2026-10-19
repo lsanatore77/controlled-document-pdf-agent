@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Field_API_Name__c</fullName>
+    <label>Field API Name</label>
+    <description>Field on compliancequest__SQX_Controlled_Document__c, or related:document / related:jobFunction / info:* for rows that are not record fields.</description>
+    <type>Text</type>
+    <length>100</length>
+    <required>false</required>
+    <unique>false</unique>
+    <externalId>false</externalId>
+    <trackTrending>false</trackTrending>
+</CustomField>

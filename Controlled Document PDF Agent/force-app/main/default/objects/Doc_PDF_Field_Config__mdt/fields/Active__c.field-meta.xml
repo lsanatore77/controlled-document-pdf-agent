@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Active__c</fullName>
+    <defaultValue>true</defaultValue>
+    <description>Uncheck to leave this field out of the review.</description>
+    <externalId>false</externalId>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+    <inlineHelpText>Uncheck to leave this field out of the review.</inlineHelpText>
+    <label>Active</label>
+    <type>Checkbox</type>
+</CustomField>

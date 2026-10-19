@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Field_API_Name__c</fullName>
+    <description>API name of the Controlled Document field to fill, e.g. compliancequest__Title__c, or RecordTypeId.</description>
+    <externalId>false</externalId>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+    <inlineHelpText>API name of the Controlled Document field to fill, e.g. compliancequest__Title__c, or RecordTypeId.</inlineHelpText>
+    <label>Field API Name</label>
+    <length>255</length>
+    <required>true</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

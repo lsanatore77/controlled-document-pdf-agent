@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Source__c</fullName>
+    <label>Source</label>
+    <description>From PDF, By rule, From PDF text, Default, Your input or System.</description>
+    <type>Text</type>
+    <length>40</length>
+    <required>false</required>
+    <unique>false</unique>
+    <externalId>false</externalId>
+    <trackTrending>false</trackTrending>
+</CustomField>

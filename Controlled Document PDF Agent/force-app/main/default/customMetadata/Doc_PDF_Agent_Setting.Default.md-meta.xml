@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>Default</label>
+    <protected>false</protected>
+    <values>
+        <field>Version_Min_Shared__c</field>
+        <value xsi:type="xsd:double">40</value>
+    </values>
+    <values>
+        <field>Likely_Version_Min_Shared__c</field>
+        <value xsi:type="xsd:double">60</value>
+    </values>
+    <values>
+        <field>Related_Min_Shared__c</field>
+        <value xsi:type="xsd:double">25</value>
+    </values>
+    <values>
+        <field>Title_Match_Min__c</field>
+        <value xsi:type="xsd:double">60</value>
+    </values>
+    <values>
+        <field>Number_Label__c</field>
+        <value xsi:type="xsd:string">Document Number</value>
+    </values>
+    <values>
+        <field>Title_Label__c</field>
+        <value xsi:type="xsd:string">Title</value>
+    </values>
+    <values>
+        <field>Revision_Label__c</field>
+        <value xsi:type="xsd:string">Revision</value>
+    </values>
+    <values>
+        <field>Summary_Prompt_Template__c</field>
+        <value xsi:nil="true"/>
+    </values>
+</CustomMetadata>

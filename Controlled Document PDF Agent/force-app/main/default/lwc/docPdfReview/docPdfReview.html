@@ -1,0 +1,117 @@
+<template>
+    <div class="wrap">
+        <template if:true={loading}>
+            <div class="muted pad">Loading the recommendations...</div>
+        </template>
+        <template if:true={error}>
+            <div class="error pad">{error}</div>
+        </template>
+        <template if:true={alreadyCreated}>
+            <div class="done pad">This PDF was already used to create {createdName}.</div>
+        </template>
+
+        <template if:true={ready}>
+            <div class="head">
+                <div class="head-line">
+                    <span class="head-title">Review field recommendations</span>
+                    <span class="badge">New record</span>
+                </div>
+                <div class="file">{fileName} <span class="muted">{pagesText}</span></div>
+                <div class="bar"><div class="bar-fill" style={progressStyle}></div></div>
+                <div class="head-line">
+                    <span class={progressClass}>{progressText}</span>
+                    <button type="button" class="link-btn" onclick={handleAcceptAll} disabled={acceptAllDisabled}>Accept all suggestions</button>
+                </div>
+                <div class="save-line" aria-live="polite">
+                    <template if:true={saving}><span class="muted">Saving your choices...</span></template>
+                    <template if:true={saved}><span class="muted">Choices saved</span></template>
+                    <template if:true={saveFailed}><span class="error">{saveError}</span></template>
+                </div>
+            </div>
+
+            <template for:each={sections} for:item="s">
+                <div key={s.key} class="section">
+                    <button type="button" class="section-head" data-key={s.key} aria-expanded={s.expanded} onclick={handleToggle}>
+                        <lightning-icon icon-name={s.chevron} size="xx-small" alternative-text=""></lightning-icon>
+                        <span class="section-title">{s.title}</span>
+                        <span class={s.countClass}>{s.countText}</span>
+                    </button>
+
+                    <template if:true={s.isOpen}>
+                        <template for:each={s.rows} for:item="r">
+                            <div key={r.key} class={r.rowClass}>
+                                <div class="row-top">
+                                    <div class="row-main">
+                                        <div class="row-label">
+                                            <span class="label">{r.label}</span>
+                                            <template if:true={r.isRequired}><abbr class="req" title="Required">*</abbr></template>
+                                            <span class={r.sourceClass}>{r.source}</span>
+                                        </div>
+                                        <template if:true={r.showValue}>
+                                            <div class={r.valueClass}>{r.valueText}</div>
+                                        </template>
+                                    </div>
+                                    <template if:true={r.showActions}>
+                                        <div class="acts" role="group" aria-label={r.label}>
+                                            <button type="button" class={r.acceptClass} data-id={r.id} title="Accept"
+                                                    aria-label={r.acceptLabel} aria-pressed={r.acceptPressed}
+                                                    disabled={r.acceptDisabled} onclick={handleAccept}>
+                                                <lightning-icon icon-name="utility:check" size="xx-small" alternative-text=""></lightning-icon>
+                                            </button>
+                                            <button type="button" class={r.editClass} data-id={r.id} title="Edit"
+                                                    aria-label={r.editLabel} aria-pressed={r.editPressed} onclick={handleEdit}>
+                                                <lightning-icon icon-name="utility:edit" size="xx-small" alternative-text=""></lightning-icon>
+                                            </button>
+                                            <button type="button" class={r.clearClass} data-id={r.id} title="Leave blank"
+                                                    aria-label={r.clearLabel} aria-pressed={r.clearPressed} onclick={handleClear}>
+                                                <lightning-icon icon-name="utility:close" size="xx-small" alternative-text=""></lightning-icon>
+                                            </button>
+                                        </div>
+                                    </template>
+                                </div>
+
+                                <template if:true={r.pickInline}>
+                                    <div class="opts" role="group" aria-label={r.label}>
+                                        <template for:each={r.options} for:item="o">
+                                            <button key={o.key} type="button" class={o.cls} data-id={r.id} data-value={o.value}
+                                                    aria-pressed={o.pressed} onclick={handlePick}>
+                                                <span class="opt-label">{o.label}</span>
+                                                <template if:true={o.hasDetail}><span class="opt-detail">{o.detail}</span></template>
+                                            </button>
+                                        </template>
+                                    </div>
+                                </template>
+
+                                <template if:true={r.isText}>
+                                    <lightning-input variant="label-hidden" label={r.label} value={r.editValue}
+                                                     data-id={r.id} onchange={handleText}></lightning-input>
+                                </template>
+                                <template if:true={r.isDate}>
+                                    <lightning-input type="date" variant="label-hidden" label={r.label} value={r.editValue}
+                                                     data-id={r.id} onchange={handleText}></lightning-input>
+                                </template>
+                                <template if:true={r.isLong}>
+                                    <lightning-textarea variant="label-hidden" label={r.label} value={r.editValue}
+                                                        data-id={r.id} onchange={handleText}></lightning-textarea>
+                                </template>
+                                <template if:true={r.isText}>
+                                    <div class="done-line"><button type="button" class="done-btn" onclick={handleDone}>Done</button></div>
+                                </template>
+                                <template if:true={r.isDate}>
+                                    <div class="done-line"><button type="button" class="done-btn" onclick={handleDone}>Done</button></div>
+                                </template>
+                                <template if:true={r.isLong}>
+                                    <div class="done-line"><button type="button" class="done-btn" onclick={handleDone}>Done</button></div>
+                                </template>
+
+                                <div class="evidence">{r.evidence}</div>
+                            </div>
+                        </template>
+                    </template>
+                </div>
+            </template>
+
+            <div class="foot muted">Submit when you are done. Nothing is created until every highlighted field is decided.</div>
+        </template>
+    </div>
+</template>

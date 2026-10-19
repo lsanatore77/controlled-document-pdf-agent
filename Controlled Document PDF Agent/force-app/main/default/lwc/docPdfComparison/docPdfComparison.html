@@ -1,0 +1,104 @@
+<template>
+    <div class="wrap">
+        <template if:true={loading}>
+            <div class="muted pad">Loading the comparison...</div>
+        </template>
+        <template if:true={error}>
+            <div class="error pad">{error}</div>
+        </template>
+
+        <template if:true={ready}>
+            <div class={verdictClass}>
+                <div class="line">
+                    <span class={badgeClass}>{verdictBadge}</span>
+                    <span class="verdict-title">{data.verdictTitle}</span>
+                </div>
+                <div>{data.verdictText}</div>
+                <div class="reasons">
+                    <template for:each={reasons} for:item="r">
+                        <div key={r.key} class="reason">
+                            <span class={r.cls}>{r.mark}</span>
+                            <span>{r.text}</span>
+                        </div>
+                    </template>
+                </div>
+                <template if:true={hasAlternate}>
+                    <div class="muted">Matches an existing document: {alternateText}</div>
+                </template>
+            </div>
+
+            <template if:true={compared}>
+                <template if:true={comparedAnyway}>
+                    <div class="note">Compared anyway. This may not be a version of {data.documentName}, so treat it as a comparison with a related document.</div>
+                </template>
+                <div class="card">
+                    <div class="block">
+                        <span class="title">What changed</span>
+                        <div>{data.summary}</div>
+                        <div class="muted small">{summarySourceLabel}</div>
+                        <div class="chips">
+                            <template for:each={counts} for:item="c">
+                                <span key={c.key} class={c.cls}>{c.text}</span>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div class="block">
+                        <span class="label">Suggested Change Scope</span>
+                        <div class="strong">{data.changeScope}</div>
+                        <div class="muted small">{data.changeScopeReason}</div>
+                    </div>
+
+                    <template if:true={hasChangesText}>
+                        <div class="block">
+                            <div class="line between">
+                                <span class="label">Suggested Changes text</span>
+                                <button type="button" class="link-btn" onclick={handleCopy}>{copyLabel}</button>
+                            </div>
+                            <div class="quote">{data.changesText}</div>
+                        </div>
+                    </template>
+
+                    <template if:true={hasHeader}>
+                        <div class="block">
+                            <span class="label">Header values</span>
+                            <div class="grid">
+                                <span class="muted">Field</span><span class="muted">Current</span><span class="muted">New PDF</span>
+                            </div>
+                            <template for:each={headerRows} for:item="h">
+                                <div key={h.key} class="grid">
+                                    <span class="cell">{h.field}</span>
+                                    <span class="cell">{h.oldValue}</span>
+                                    <span class={h.newCls}>{h.newValue}</span>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+
+                    <div class="section-head">Sections</div>
+                    <template for:each={sections} for:item="s">
+                        <div key={s.key} class="section">
+                            <button type="button" class="section-btn" data-key={s.key} aria-expanded={s.expanded} disabled={s.noDetail} onclick={handleToggle}>
+                                <span class="line">
+                                    <lightning-icon icon-name={s.chevron} size="xx-small" alternative-text=""></lightning-icon>
+                                    <span>{s.name}</span>
+                                </span>
+                                <span class={s.badgeCls}>{s.status}</span>
+                            </button>
+                            <template if:true={s.isOpen}>
+                                <div class="detail">
+                                    <template for:each={s.removed} for:item="x">
+                                        <div key={x.key} class="removed"><strong>Removed:</strong> {x.text}</div>
+                                    </template>
+                                    <template for:each={s.added} for:item="x">
+                                        <div key={x.key} class="added"><strong>Added:</strong> {x.text}</div>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+            </template>
+        </template>
+    </div>
+</template>

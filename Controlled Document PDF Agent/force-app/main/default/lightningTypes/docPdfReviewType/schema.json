@@ -1,0 +1,5 @@
+{
+  "title": "Doc PDF Review Type",
+  "description": "The user's decision on each recommended Controlled Document field",
+  "lightning:type": "@apexClassType/c__DocPdfReview"
+}

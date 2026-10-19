@@ -1,0 +1,5 @@
+{
+  "title": "Doc PDF File Selection Type",
+  "description": "The PDF the user uploads or picks for a new Controlled Document",
+  "lightning:type": "@apexClassType/c__DocPdfFileSelection"
+}

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Outcome__c</fullName>
+    <label>Outcome</label>
+    <description>What happened on create: set, left blank, created, failed.</description>
+    <type>Text</type>
+    <length>255</length>
+    <required>false</required>
+    <unique>false</unique>
+    <externalId>false</externalId>
+    <trackTrending>false</trackTrending>
+</CustomField>
