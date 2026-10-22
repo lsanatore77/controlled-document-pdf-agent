@@ -252,7 +252,7 @@ global with sharing class DocPdfCreateDocumentAction {
                 f.Final_Display__c = info ? null : f.Proposed_Display__c;
                 continue;
             }
-            Decision d = byId.get(String.valueOf(f.Id).left(15));
+            Decision d = f.Id == null ? null : byId.get(String.valueOf(f.Id).left(15));
             if (d != null && String.isNotBlank(d.decision)) {
                 f.Decision__c = d.decision;
                 if (d.decision == 'edit') {
@@ -280,6 +280,7 @@ global with sharing class DocPdfCreateDocumentAction {
         return f.Required__c == true && String.isBlank(f.Final_Value__c);
     }
 
+    @TestVisible
     private static Boolean isRecordField(Doc_PDF_Field__c f) {
         String api = f.Field_API_Name__c;
         return api != null && !api.startsWith('related:') && !api.startsWith('info:') && f.Field_Type__c != 'info';
@@ -312,6 +313,7 @@ global with sharing class DocPdfCreateDocumentAction {
 
     // ------------------------------------------------------------------ children
 
+    @TestVisible
     private static Integer saveChildren(List<SObject> records, List<Doc_PDF_Field__c> rows, List<String> notes) {
         if (records.isEmpty()) {
             return 0;
@@ -332,6 +334,7 @@ global with sharing class DocPdfCreateDocumentAction {
         return ok;
     }
 
+    @TestVisible
     private static Boolean linkFile(String contentDocumentId, Id recordId, List<String> notes) {
         if (String.isBlank(contentDocumentId)) {
             return false;
@@ -352,6 +355,7 @@ global with sharing class DocPdfCreateDocumentAction {
     }
 
     /** Sets the linked PDF as the Controlled Document's Primary Content, as ComplianceQuest stores it. */
+    @TestVisible
     private static Boolean setPrimaryContent(String contentDocumentId, Id recordId,
                                              Map<String, Schema.SObjectField> fieldMap, List<String> notes) {
         Schema.SObjectField ref = fieldMap.get('compliancequest__content_reference__c');

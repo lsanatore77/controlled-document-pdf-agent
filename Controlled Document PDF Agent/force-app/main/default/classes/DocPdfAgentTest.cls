@@ -410,6 +410,79 @@ private class DocPdfAgentTest {
         Assert.areEqual('One.', DocPdfFieldParser.firstSentenceOf('One. Two.', 100));
     }
 
+    @IsTest
+    static void createStepHelpers() {
+        System.runAs(agentUser()) {
+            // Values converted to each field type.
+            Assert.areEqual(Datetime.newInstance(2024, 11, 13, 8, 30, 0),
+                DocPdfCreateDocumentAction.coerce(Doc_PDF_Proposal__c.CreatedDate.getDescribe(), '2024-11-13T08:30:00'));
+            Assert.areEqual(true, DocPdfCreateDocumentAction.coerce(Doc_PDF_Field__c.Required__c.getDescribe(), 'TRUE'));
+            Assert.areEqual(Decimal.valueOf('12'), DocPdfCreateDocumentAction.coerce(Doc_PDF_Proposal__c.Pages_Read__c.getDescribe(), '12'));
+            Assert.areEqual(UserInfo.getUserId(), DocPdfCreateDocumentAction.coerce(Doc_PDF_Proposal__c.OwnerId.getDescribe(), UserInfo.getUserId()));
+            Assert.areEqual('0123456789', ((String) DocPdfCreateDocumentAction.coerce(
+                Doc_PDF_Proposal__c.Content_Version_Id__c.getDescribe(), '0123456789012345678901')).left(10));
+
+            Assert.isTrue(DocPdfCreateDocumentAction.isRecordField(new Doc_PDF_Field__c(Field_API_Name__c = 'compliancequest__Title__c', Field_Type__c = 'string')));
+            Assert.isFalse(DocPdfCreateDocumentAction.isRecordField(new Doc_PDF_Field__c(Field_API_Name__c = 'info:primaryContent', Field_Type__c = 'info')));
+            Assert.isFalse(DocPdfCreateDocumentAction.isRecordField(new Doc_PDF_Field__c(Field_API_Name__c = 'related:document')));
+
+            List<String> notes = new List<String>();
+            Assert.areEqual(0, DocPdfCreateDocumentAction.saveChildren(new List<SObject>(), new List<Doc_PDF_Field__c>(), notes));
+            // A child that cannot be saved (no parent) is reported, not thrown.
+            Doc_PDF_Field__c orphan = new Doc_PDF_Field__c(Field_Label__c = 'Training Requirement', Final_Display__c = 'Quality');
+            Assert.areEqual(0, DocPdfCreateDocumentAction.saveChildren(
+                new List<SObject>{ new Doc_PDF_Field__c(Field_API_Name__c = 'x') }, new List<Doc_PDF_Field__c>{ orphan }, notes));
+            Assert.isTrue(orphan.Outcome__c.startsWith('Failed'), orphan.Outcome__c);
+            Assert.isFalse(notes.isEmpty());
+
+            // Linking the PDF, and setting it as Primary Content.
+            Doc_PDF_Proposal__c p = new Doc_PDF_Proposal__c(Status__c = 'Draft');
+            insert p;
+            ContentVersion cv = makePdf();
+            Assert.isFalse(DocPdfCreateDocumentAction.linkFile(null, p.Id, notes));
+            Assert.isTrue(DocPdfCreateDocumentAction.linkFile(cv.ContentDocumentId, p.Id, notes));
+            Map<String, Schema.SObjectField> cdFields =
+                compliancequest__SQX_Controlled_Document__c.SObjectType.getDescribe().fields.getMap();
+            Assert.isFalse(DocPdfCreateDocumentAction.setPrimaryContent(null, p.Id, cdFields, notes));
+            // Not a Controlled Document Id: the update fails and is reported as a note.
+            Assert.isFalse(DocPdfCreateDocumentAction.setPrimaryContent(cv.ContentDocumentId, p.Id, cdFields, notes));
+        }
+    }
+
+    @IsTest
+    static void createStepEdgeCases() {
+        System.runAs(agentUser()) {
+            // No proposal waiting.
+            DocPdfCreateDocumentAction.Result none = submit(null);
+            Assert.isFalse(none.success);
+            Assert.isTrue(none.summary.contains('no PDF waiting'), none.summary);
+
+            // Already created: returns the existing record.
+            Doc_PDF_Proposal__c done = new Doc_PDF_Proposal__c(Status__c = 'Created',
+                Created_Record_Id__c = UserInfo.getUserId(), Created_Record_Name__c = 'SOP-1[001]');
+            insert done;
+            DocPdfReview again = new DocPdfReview();
+            again.proposalId = done.Id;
+            DocPdfCreateDocumentAction.Result r = submit(again);
+            Assert.isTrue(r.success, r.summary);
+            Assert.areEqual('SOP-1[001]', r.documentName);
+
+            // Edited values and a decision for a saved row.
+            Doc_PDF_Proposal__c p = new Doc_PDF_Proposal__c(Status__c = 'Ready for Review');
+            insert p;
+            Doc_PDF_Field__c row = new Doc_PDF_Field__c(Proposal__c = p.Id, Field_API_Name__c = 'compliancequest__Title__c',
+                Field_Label__c = 'Title', Field_Type__c = 'string', Decision__c = 'undecided', Proposed_Value__c = 'Old', Sort_Order__c = 10);
+            insert row;
+            List<Doc_PDF_Field__c> rows = [SELECT Id, Decision__c, Proposed_Value__c, Proposed_Display__c, Final_Value__c,
+                Final_Display__c, Field_Type__c, Field_API_Name__c, Required__c FROM Doc_PDF_Field__c WHERE Id = :row.Id];
+            DocPdfCreateDocumentAction.applyDecisions(rows, JSON.serialize(new List<Map<String, Object>>{
+                new Map<String, Object>{ 'id' => row.Id, 'decision' => 'edit', 'value' => 'New title', 'display' => null } }));
+            Assert.areEqual('edit', rows[0].Decision__c);
+            Assert.areEqual('New title', rows[0].Final_Value__c);
+            Assert.areEqual('New title', rows[0].Final_Display__c);
+        }
+    }
+
     private static DocPdfCreateDocumentAction.Result submit(DocPdfReview review) {
         DocPdfCreateDocumentAction.Request req = new DocPdfCreateDocumentAction.Request();
         req.review = review;

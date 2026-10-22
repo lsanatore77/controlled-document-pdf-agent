@@ -32,6 +32,14 @@ private class DocPdfCompareTest {
             '2. Scope\nIt covers conveyors, fillers and cappers on lines one to four.\n';
     }
 
+    private static String relatedText() {
+        return 'Title: Additives Handling Draft\n' +
+            '1. Purpose\nThe purpose of this SOP is to ensure the correct and consistent use of additives in concrete mixing equipment. ' +
+            'It prevents issues such as mix instability and improper viscosity.\n' +
+            '2. Scope\nThis SOP applies to all personnel who operate mixing equipment in the plant and to all additive suppliers.\n' +
+            '3. Storage\nKeep additive drums sealed and out of direct sunlight in the north warehouse at all times.\n';
+    }
+
     private static DocPdfMatchService.Result run(String newText) {
         DocPdfMatchService.Settings st = new DocPdfMatchService.Settings();
         return DocPdfMatchService.match('SOP-44123[002]', 'SOP-44123', 'Usage of Additives in Mixing Equipment', '002',
@@ -211,6 +219,164 @@ private class DocPdfCompareTest {
         }
     }
 
+    // ------------------------------------------------------------------ action, with an in-memory document
+
+    /** The existing document, not inserted: ComplianceQuest validation may block inserting one in a test. */
+    private static void useDocument(Id primaryContentDocumentId) {
+        DocPdfCompareAction.testDocument = new compliancequest__SQX_Controlled_Document__c(
+            compliancequest__Title__c = 'Usage of Additives in Mixing Equipment',
+            compliancequest__Document_Number__c = 'SOP-44123',
+            compliancequest__Revision__c = '002',
+            compliancequest__Content_Reference__c = primaryContentDocumentId);
+    }
+
+    private static Doc_PDF_Proposal__c proposalFor(ContentVersion cv) {
+        Doc_PDF_Proposal__c p = new Doc_PDF_Proposal__c(Status__c = 'Draft', File_Name__c = 'New PDF',
+            Content_Document_Id__c = cv.ContentDocumentId, Content_Version_Id__c = cv.Id);
+        insert p;
+        return p;
+    }
+
+    private static DocPdfCompareAction.Result compare(Id proposalId, Boolean anyway) {
+        DocPdfCompareAction.Request req = new DocPdfCompareAction.Request();
+        req.proposalId = proposalId;
+        req.compareAnyway = anyway;
+        return DocPdfCompareAction.run(new List<DocPdfCompareAction.Request>{ req })[0];
+    }
+
+    @IsTest
+    static void actionComparesANewerVersion() {
+        System.runAs(agentUser()) {
+            ContentVersion oldCv = pdf('Current version', 'OLD-FILE');
+            Doc_PDF_Proposal__c p = proposalFor(pdf('New version', 'NEW-FILE'));
+            useDocument(oldCv.ContentDocumentId);
+            Test.setMock(HttpCalloutMock.class, new VisionMock());
+            Test.startTest();
+            DocPdfCompareAction.Result r = compare(p.Id, null);
+            Test.stopTest();
+            Assert.isTrue(r.success, r.message);
+            Assert.isTrue(r.compared, r.message);
+            Assert.areEqual(DocPdfMatchService.VERSION, r.verdict);
+            Assert.areEqual((String) p.Id, r.comparison.proposalId);
+            Doc_PDF_Proposal__c saved = [SELECT Status__c, Mode__c, Match_Verdict__c, Summary__c, Comparison_JSON__c FROM Doc_PDF_Proposal__c WHERE Id = :p.Id];
+            Assert.areEqual('Compared', saved.Status__c);
+            Assert.areEqual('Compare', saved.Mode__c);
+            Assert.isNotNull(saved.Summary__c);
+            Assert.areEqual(1, [SELECT COUNT() FROM Doc_PDF_Text_Cache__c]);
+            DocPdfComparisonController.ComparisonData data = DocPdfComparisonController.getComparison(p.Id);
+            Assert.isTrue(data.success, '' + data.errorMessage);
+            Map<String, Object> view = (Map<String, Object>) JSON.deserializeUntyped(data.comparisonJson);
+            Assert.areEqual(true, view.get('compared'));
+            Assert.isTrue(DocPdfComparisonController.getComparison(null).success);
+        }
+    }
+
+    @IsTest
+    static void actionUsesCachedTextAndFlagsADifferentDocument() {
+        System.runAs(agentUser()) {
+            ContentVersion oldCv = pdf('Current version', 'OLD-FILE');
+            insert new Doc_PDF_Text_Cache__c(Content_Version_Id__c = oldCv.Id, Text__c = oldText(), Pages_Read__c = 1, Total_Pages__c = 1);
+            Doc_PDF_Proposal__c p = proposalFor(pdf('Cleaning', 'DIFF-FILE'));
+            useDocument(oldCv.ContentDocumentId);
+            Test.setMock(HttpCalloutMock.class, new VisionMock());
+            Test.startTest();
+            DocPdfCompareAction.Result r = compare(p.Id, null);
+            Test.stopTest();
+            Assert.isTrue(r.success, r.message);
+            Assert.isFalse(r.compared);
+            Assert.areEqual(DocPdfMatchService.DIFFERENT, r.verdict);
+            Assert.areEqual('Draft', [SELECT Status__c FROM Doc_PDF_Proposal__c WHERE Id = :p.Id].Status__c);
+            Assert.areEqual(1, [SELECT COUNT() FROM Doc_PDF_Text_Cache__c]);
+        }
+    }
+
+    @IsTest
+    static void actionAsksBeforeComparingARelatedDocument() {
+        System.runAs(agentUser()) {
+            ContentVersion oldCv = pdf('Current version', 'OLD-FILE');
+            Doc_PDF_Proposal__c p = proposalFor(pdf('Draft', 'REL-FILE'));
+            useDocument(oldCv.ContentDocumentId);
+            Test.setMock(HttpCalloutMock.class, new VisionMock());
+            Test.startTest();
+            DocPdfCompareAction.Result r = compare(p.Id, false);
+            Test.stopTest();
+            Assert.isTrue(r.success, r.message);
+            if (r.verdict == DocPdfMatchService.POSSIBLY_RELATED) {
+                Assert.isFalse(r.compared);
+            }
+        }
+    }
+
+    @IsTest
+    static void actionComparesARelatedDocumentWhenAsked() {
+        System.runAs(agentUser()) {
+            ContentVersion oldCv = pdf('Current version', 'OLD-FILE');
+            Doc_PDF_Proposal__c p = proposalFor(pdf('Draft', 'REL-FILE'));
+            useDocument(oldCv.ContentDocumentId);
+            Test.setMock(HttpCalloutMock.class, new VisionMock());
+            Test.startTest();
+            DocPdfCompareAction.Result r = compare(p.Id, true);
+            Test.stopTest();
+            Assert.isTrue(r.success, r.message);
+            if (r.verdict == DocPdfMatchService.POSSIBLY_RELATED) {
+                Assert.isTrue(r.compared);
+            }
+        }
+    }
+
+    @IsTest
+    static void actionReportsUnreadableAndMissingFiles() {
+        System.runAs(agentUser()) {
+            ContentVersion oldCv = pdf('Current version', 'OLD-FILE');
+            ContentVersion bad = pdf('Unreadable', 'BAD-FILE');
+            Doc_PDF_Proposal__c p = proposalFor(bad);
+            Doc_PDF_Proposal__c same = proposalFor(oldCv);
+            Test.setMock(HttpCalloutMock.class, new VisionMock());
+
+            // Same file as the Primary Content: nothing to compare.
+            useDocument(oldCv.ContentDocumentId);
+            DocPdfCompareAction.Result r1 = compare(same.Id, null);
+            Assert.isFalse(r1.success);
+            Assert.isTrue(r1.message.contains('same file'), r1.message);
+
+            // No Primary Content.
+            useDocument(null);
+            DocPdfCompareAction.Result r2 = compare(p.Id, null);
+            Assert.isFalse(r2.success);
+            Assert.isTrue(r2.message.contains('no PDF'), r2.message);
+
+            // The new PDF cannot be read (cached old text, so the only callout is the failing one).
+            insert new Doc_PDF_Text_Cache__c(Content_Version_Id__c = oldCv.Id, Text__c = oldText());
+            useDocument(oldCv.ContentDocumentId);
+            Test.startTest();
+            DocPdfCompareAction.Result r3 = compare(p.Id, null);
+            Test.stopTest();
+            Assert.isFalse(r3.success);
+            Assert.isTrue(r3.message.contains('could not read'), r3.message);
+        }
+    }
+
+    @IsTest
+    static void actionFindsDocumentsAndPdfs() {
+        System.runAs(agentUser()) {
+            Assert.isNull(DocPdfCompareAction.findDocument(null, null));
+            Assert.isNull(DocPdfCompareAction.findDocument(UserInfo.getUserId(), 'NO-SUCH-DOC-0000[001]'));
+            compliancequest__SQX_Controlled_Document__c doc = new compliancequest__SQX_Controlled_Document__c(
+                compliancequest__Content_Reference__c = 'not-an-id');
+            Assert.isNull(DocPdfCompareAction.currentPdf(doc));
+            ContentVersion txt = new ContentVersion(Title = 'notes', PathOnClient = 'notes.txt', VersionData = Blob.valueOf('x'));
+            insert txt;
+            doc.compliancequest__Secondary_Content_Reference__c =
+                [SELECT ContentDocumentId FROM ContentVersion WHERE Id = :txt.Id].ContentDocumentId;
+            Assert.isNull(DocPdfCompareAction.currentPdf(doc));
+
+            // No PDF chosen yet.
+            useDocument(null);
+            DocPdfCompareAction.Result r = compare(null, null);
+            Assert.isFalse(r.success);
+        }
+    }
+
     @IsTest
     static void controllerWithoutComparison() {
         System.runAs(agentUser()) {
@@ -235,10 +401,18 @@ private class DocPdfCompareTest {
             Map<String, Object> request = (Map<String, Object>) ((List<Object>) body.get('requests'))[0];
             Map<String, Object> inputConfig = (Map<String, Object>) request.get('inputConfig');
             String sent = EncodingUtil.base64Decode((String) inputConfig.get('content')).toString();
-            String t = sent.contains('OLD-FILE') ? oldText() : newVersionText();
             HttpResponse res = new HttpResponse();
-            res.setStatusCode(200);
             res.setHeader('Content-Type', 'application/json');
+            if (sent.contains('BAD-FILE')) {
+                res.setStatusCode(403);
+                res.setBody('{"error":{"code":403,"message":"The request is missing a valid API key."}}');
+                return res;
+            }
+            String t = sent.contains('OLD-FILE') ? oldText()
+                : sent.contains('DIFF-FILE') ? differentText()
+                : sent.contains('REL-FILE') ? relatedText()
+                : newVersionText();
+            res.setStatusCode(200);
             res.setBody(JSON.serialize(new Map<String, Object>{
                 'responses' => new List<Object>{
                     new Map<String, Object>{

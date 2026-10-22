@@ -13,6 +13,10 @@
  */
 global with sharing class DocPdfCompareAction {
 
+    /** Tests set this to compare with an in-memory document, where the org's validation blocks inserting one. */
+    @TestVisible
+    private static compliancequest__SQX_Controlled_Document__c testDocument;
+
     global class Request {
         @InvocableVariable(label='Controlled Document Id' description='The Controlled Document to compare with: the record the user is on.')
         global String controlledDocumentId;
@@ -59,7 +63,8 @@ global with sharing class DocPdfCompareAction {
         }
         try {
             // ---- the Controlled Document
-            compliancequest__SQX_Controlled_Document__c doc = findDocument(req.controlledDocumentId, req.documentNumber);
+            compliancequest__SQX_Controlled_Document__c doc = testDocument != null
+                ? testDocument : findDocument(req.controlledDocumentId, req.documentNumber);
             if (doc == null) {
                 r.message = 'Open the Controlled Document you want to compare with, or tell me its document number.';
                 return r;
