@@ -36,7 +36,7 @@
     </values>
     <values>
         <field>Default_Value__c</field>
-        <value xsi:nil="true"/>
+        <value xsi:type="xsd:string">{First Line}</value>
     </values>
     <values>
         <field>Match_Rules__c</field>
@@ -44,6 +44,10 @@
     </values>
     <values>
         <field>Help_Text__c</field>
-        <value xsi:type="xsd:string">From the &quot;Title:&quot; label in the PDF header.</value>
+        <value xsi:type="xsd:string">AI first; else the &quot;Title:&quot; label in the PDF, else its first line.</value>
+    </values>
+    <values>
+        <field>AI_Answer__c</field>
+        <value xsi:type="xsd:string">title</value>
     </values>
 </CustomMetadata>

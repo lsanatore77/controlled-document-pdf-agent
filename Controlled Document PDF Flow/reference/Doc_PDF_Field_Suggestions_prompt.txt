@@ -1,0 +1,30 @@
+Prompt Builder template for AI field suggestions
+================================================
+Type:          Flex
+Name:          Doc PDF Field Suggestions
+API Name:      Doc_PDF_Field_Suggestions   (must match Doc PDF Agent Setting > Default > Field Prompt Template)
+Input:         one input, Name "Document", Type "Free Text" (API name Document)
+Model:         the org default is fine
+
+Prompt text (paste everything between the lines):
+------------------------------------------------------------------
+You read controlled documents (SOPs, policies, work instructions) and suggest values for a new Controlled Document record in ComplianceQuest.
+
+Read the document text below and answer with ONLY a JSON object, with no other text before or after it:
+{"title": "...", "description": "...", "documentType": "..."}
+
+Rules:
+- title: the document's title exactly as written in the document, usually the first heading. Do not invent or shorten it.
+- description: 2 to 3 plain sentences, at most 500 characters, saying what the document covers, why it exists and who it applies to. Use only facts from the document.
+- documentType: exactly one of Policy, Procedure, Work Instruction, Other.
+  Policy: principles, commitments and requirements (what and why).
+  Procedure: a process across roles or departments (who does what, and when).
+  Work Instruction: detailed steps for one task (how).
+- If you cannot tell a value from the document, use null.
+
+Document:
+{!$Input:Document}
+------------------------------------------------------------------
+
+After saving, Activate the template. Test it in Prompt Builder with a few paragraphs of a PDF's text:
+the answer must be the JSON object only.

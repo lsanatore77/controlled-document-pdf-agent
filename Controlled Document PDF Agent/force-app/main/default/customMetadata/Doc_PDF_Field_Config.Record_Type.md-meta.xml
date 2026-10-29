@@ -46,4 +46,8 @@
         <field>Help_Text__c</field>
         <value xsi:type="xsd:string">Every document this agent creates uses this record type.</value>
     </values>
+    <values>
+        <field>AI_Answer__c</field>
+        <value xsi:nil="true"/>
+    </values>
 </CustomMetadata>

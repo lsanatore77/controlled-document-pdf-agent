@@ -40,10 +40,20 @@
     </values>
     <values>
         <field>Match_Rules__c</field>
-        <value xsi:type="xsd:string">(?im)^document number:\s*SOP =&gt; SOP</value>
+        <value xsi:type="xsd:string">(?i)\bwork instruction\b =&gt; Work Instruction
+(?im)^document number:\s*SOP =&gt; SOP
+(?im)^\s*policy purpose\b =&gt; Policy
+(?i)\bprinciples of this policy\b =&gt; Policy
+(?im)^\s*(\d{1,}\.?\s*)?procedure\s*$ =&gt; Procedure
+(?i)\bpolicy\b =&gt; Policy
+(?i)\bprocedure\b =&gt; Procedure</value>
     </values>
     <values>
         <field>Help_Text__c</field>
-        <value xsi:type="xsd:string">From the &quot;Document Category:&quot; label, else by rule from the document number.</value>
+        <value xsi:type="xsd:string">AI document type first; else the &quot;Document Category:&quot; label, else by rule.</value>
+    </values>
+    <values>
+        <field>AI_Answer__c</field>
+        <value xsi:type="xsd:string">documentType</value>
     </values>
 </CustomMetadata>

@@ -2,6 +2,8 @@
 <Package xmlns="http://soap.sforce.com/2006/04/metadata">
     <types>
         <members>DocPdfAgentTest</members>
+        <members>DocPdfAiSuggestions</members>
+        <members>DocPdfAiTest</members>
         <members>DocPdfBuildRecommendationsAction</members>
         <members>DocPdfCompareAction</members>
         <members>DocPdfCompareService</members>
@@ -78,6 +80,9 @@
         <members>Doc_PDF_Proposal__c.Match_Score__c</members>
         <members>Doc_PDF_Proposal__c.Comparison_JSON__c</members>
         <members>Doc_PDF_Proposal__c.Summary__c</members>
+        <members>Doc_PDF_Proposal__c.AI_Status__c</members>
+        <members>Doc_PDF_Field_Config__mdt.AI_Answer__c</members>
+        <members>Doc_PDF_Agent_Setting__mdt.Field_Prompt_Template__c</members>
         <members>Doc_PDF_Text_Cache__c.Content_Version_Id__c</members>
         <members>Doc_PDF_Text_Cache__c.Text__c</members>
         <members>Doc_PDF_Text_Cache__c.Pages_Read__c</members>
@@ -98,6 +103,7 @@
         <members>Doc_PDF_Field_Config.Document_Category</members>
         <members>Doc_PDF_Field_Config.Document_Title</members>
         <members>Doc_PDF_Field_Config.Record_Type</members>
+        <members>Doc_PDF_Field_Config.Template</members>
         <name>CustomMetadata</name>
     </types>
     <types>

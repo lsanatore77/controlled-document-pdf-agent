@@ -34,4 +34,8 @@
         <field>Summary_Prompt_Template__c</field>
         <value xsi:nil="true"/>
     </values>
+    <values>
+        <field>Field_Prompt_Template__c</field>
+        <value xsi:type="xsd:string">Doc_PDF_Field_Suggestions</value>
+    </values>
 </CustomMetadata>

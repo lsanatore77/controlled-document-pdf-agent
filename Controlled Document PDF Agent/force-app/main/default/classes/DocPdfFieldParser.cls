@@ -138,13 +138,19 @@ public with sharing class DocPdfFieldParser {
         String name = heading.trim().removeEnd(':');
         Integer start = findHeading(lines, '(?i)^(\\d+\\.?\\s*)?' + Pattern.quote(name) + '\\s*:?\\s*$', 0);
         if (start < 0) {
+            // A heading with a few words around the name: "POLICY PURPOSE", "Purpose of this Procedure".
+            start = findShortHeading(lines,
+                '(?i)^(\\d+\\.?\\s*)?([A-Za-z&/-]+\\s+){0,3}' + Pattern.quote(name) + '(\\s+[A-Za-z&/-]+){0,3}\\s*:?\\s*$');
+        }
+        if (start < 0) {
             return null;
         }
         List<String> parts = new List<String>();
         for (Integer i = start + 1; i < lines.size() && parts.size() < 60; i++) {
             String l = lines[i];
             String bare = l.replaceFirst('^\\d+\\.?\\s*', '').removeEnd(':').trim().toLowerCase();
-            if (COMMON_HEADINGS.contains(bare) || Pattern.matches('^\\d+\\.?\\s+[A-Z][A-Za-z ]{2,40}$', l)) {
+            if (COMMON_HEADINGS.contains(bare) || Pattern.matches('^\\d+\\.?\\s+[A-Z][A-Za-z ]{2,40}$', l)
+                || isCapsHeading(l)) {
                 break;
             }
             if (isPageHeader(l)) {
@@ -269,6 +275,53 @@ public with sharing class DocPdfFieldParser {
         return lower.startsWith('document number:') || lower.startsWith('revision:')
             || lower.startsWith('title:') || lower.startsWith('department:')
             || lower.startsWith('effective date:');
+    }
+
+    /** A short line (up to 60 characters, no full stop) that matches the regex, outside the contents. */
+    private static Integer findShortHeading(List<String> lines, String regex) {
+        Pattern pat = Pattern.compile(regex);
+        for (Integer i = 0; i < lines.size(); i++) {
+            String l = lines[i];
+            if (l.length() > 60 || l.contains('.') && !Pattern.matches('^\\d+\\.\\s.*', l) || isTocLine(l)) {
+                continue;
+            }
+            if (pat.matcher(l).matches()) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /** An all-capitals heading line such as "PRINCIPLES OF THIS POLICY". */
+    @TestVisible
+    private static Boolean isCapsHeading(String l) {
+        return l != null && l.length() <= 60 && Pattern.matches('^[^a-z]*[A-Z]{3,}[^a-z]*$', l)
+            && !Pattern.matches('^[A-Z0-9-]+\\s*\\[.*', l);
+    }
+
+    /**
+     * The document's first line that reads like a title: the first clean line that is not a
+     * page header, a contents line, a page number or a heading such as "PURPOSE". Null if none.
+     */
+    public static String firstLineOf(String text) {
+        if (String.isBlank(text)) {
+            return null;
+        }
+        Integer checked = 0;
+        for (String l : cleanLines(text)) {
+            if (checked++ > 15) {
+                break;
+            }
+            String bare = l.replaceFirst('^\\d+\\.?\\s*', '').removeEnd(':').trim();
+            if (bare.length() < 4 || bare.length() > 200 || isPageHeader(l) || isTocLine(l)
+                || COMMON_HEADINGS.contains(bare.toLowerCase())
+                || Pattern.matches('(?i)^(page\\s*)?\\d+(\\s*(of|/|\\|)\\s*\\d+)?(\\s*\\|?\\s*page)?$', bare)
+                || bare.contains(':')) {
+                continue;
+            }
+            return bare;
+        }
+        return null;
     }
 
     private static Integer findHeading(List<String> lines, String regex, Integer fromIndex) {

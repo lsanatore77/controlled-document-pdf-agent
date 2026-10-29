@@ -17,6 +17,9 @@
                     <span class="badge">New record</span>
                 </div>
                 <div class="file">{fileName} <span class="muted">{pagesText}</span></div>
+                <template if:true={hasAiStatus}>
+                    <div class={aiStatusClass}>{aiStatus}</div>
+                </template>
                 <div class="bar"><div class="bar-fill" style={progressStyle}></div></div>
                 <div class="head-line">
                     <span class={progressClass}>{progressText}</span>

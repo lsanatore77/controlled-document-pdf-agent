@@ -133,6 +133,9 @@ global with sharing class DocPdfCreateDocumentAction {
             }
 
             String testNumber;
+            // The values set above, kept so a retry can start from a clean record: ComplianceQuest's
+            // triggers may have changed the first attempt's record in memory (its name was then not built).
+            Map<String, Object> setValues = new Map<String, Object>(doc.getPopulatedFieldsAsMap());
             Savepoint sp = Database.setSavepoint();
             try {
                 insert as user doc;
@@ -145,8 +148,8 @@ global with sharing class DocPdfCreateDocumentAction {
                 if (canRetry) {
                     // ComplianceQuest did not number it: this is a test app, so use a made-up number.
                     testNumber = 'TEST-' + Datetime.now().format('yyyyMMdd-HHmmss');
+                    doc = freshCopy(setValues);
                     doc.put(numberField, testNumber);
-                    doc.Id = null;
                     Savepoint sp2 = Database.setSavepoint();
                     try {
                         insert as user doc;
@@ -278,6 +281,18 @@ global with sharing class DocPdfCreateDocumentAction {
             return true;
         }
         return f.Required__c == true && String.isBlank(f.Final_Value__c);
+    }
+
+    /** A new Controlled Document with only the given field values (no Id, nothing a trigger set). */
+    @TestVisible
+    private static compliancequest__SQX_Controlled_Document__c freshCopy(Map<String, Object> values) {
+        compliancequest__SQX_Controlled_Document__c d = new compliancequest__SQX_Controlled_Document__c();
+        for (String k : values.keySet()) {
+            if (k.toLowerCase() != 'id') {
+                d.put(k, values.get(k));
+            }
+        }
+        return d;
     }
 
     @TestVisible

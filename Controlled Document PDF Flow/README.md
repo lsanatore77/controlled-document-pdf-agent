@@ -32,7 +32,8 @@ Any failure ─> "Something went wrong" screen with the message
 | Compare | `DocPdfCompareAction`, `DocPdfMatchService`, `DocPdfCompareService`, `DocPdfComparisonController`, custom metadata `Doc_PDF_Agent_Setting__mdt` (Default) |
 | Data | `Doc_PDF_Proposal__c`, `Doc_PDF_Field__c`, `Doc_PDF_Text_Cache__c` |
 | Access | Permission set `Doc_From_PDF_Agent_Access` (now also the flow and `DocPdfFlowCreateAction`) |
-| Tests | `DocPdfAgentTest`, `DocPdfExtractionTest`, `DocPdfCompareTest`, `DocPdfFlowTest` |
+| AI suggestions | `DocPdfAiSuggestions`, Prompt Builder template `Doc_PDF_Field_Suggestions` (created in the org: `reference/Doc_PDF_Field_Suggestions_prompt.txt`), fields AI Answer (field config), Field Prompt Template (setting), AI Status (proposal) |
+| Tests | `DocPdfAgentTest`, `DocPdfExtractionTest`, `DocPdfCompareTest`, `DocPdfFlowTest`, `DocPdfAiTest` |
 
 Not in this folder (agent only): the agent script and the three Lightning Types. `docPdfReview` and `docPdfComparison` are included but not exposed; the flow components use them. Do not deploy this folder over an org that runs the agent version: it removes the agent targets from those two components.
 
@@ -47,7 +48,7 @@ sf project deploy start --manifest manifest/package.xml --target-org testorg
 Production (validate, then quick deploy with the job Id it prints):
 
 ```
-sf project deploy validate --manifest manifest/package.xml --target-org testorg --test-level RunSpecifiedTests --tests DocPdfAgentTest DocPdfExtractionTest DocPdfCompareTest DocPdfFlowTest
+sf project deploy validate --manifest manifest/package.xml --target-org testorg --test-level RunSpecifiedTests --tests DocPdfAgentTest DocPdfExtractionTest DocPdfCompareTest DocPdfFlowTest DocPdfAiTest
 sf project deploy quick --job-id 0Af... --target-org testorg
 ```
 
@@ -56,6 +57,23 @@ Then:
 2. Create the `Google_Cloud_Vision` Named Credential (below).
 3. Assign **Doc_From_PDF_Agent_Access** to the users.
 4. Add the flow to pages in Lightning App Builder: drag the standard **Flow** component, choose **Controlled Document from PDF**, and on a Controlled Document record page tick **Pass record ID into this variable** (`recordId`). On a Home or App page leave it unticked: the flow goes straight to Create.
+
+## AI suggestions (with rule fallback)
+
+Title, Description, Document Category and Template can be suggested by AI first, with the rules below as the fallback:
+
+1. After Google Vision reads the PDF, the text (first 30,000 characters) goes to a Prompt Builder flex template, **Doc_PDF_Field_Suggestions**, which answers with JSON: title, description, documentType (Policy, Procedure, Work Instruction, Other). The prompt text and setup steps are in `reference/Doc_PDF_Field_Suggestions_prompt.txt`.
+2. Each field with an **AI Answer** in Doc PDF Field Config (title, description, documentType) uses the AI value first. AI values are always left for review and are labeled **Written by AI**.
+3. If AI is off (no template set, template missing, Einstein off), fails, or gives a value that does not fit the field (not a picklist value, no such template), the field's Value Source rules run, as before. The note under the field says why.
+4. The top of the review shows **AI suggestions: on** or **AI suggestions: off** with the reason. The same text is saved on the proposal (AI Status).
+
+Turn AI off by clearing **Field Prompt Template** on Doc PDF Agent Setting (Default), or by clearing a field's AI Answer.
+
+**Template (numbering).** The Template row picks the CQ template from the AI document type (Policy → TMP-POL-000, Procedure → TMP-PROC-000, Work Instruction → TMP-WI-000) or, as the fallback, by rule from the text. CQ then numbers the document from the template (POL-000001 and so on); the PDF stays the Primary Content. Change the template numbers in the Template row's Match Rules if your templates are numbered differently. Only Template Document records are offered.
+
+**Title fallback.** Default Value `{First Line}` on the Title row: when there is no "Title:" label, the first line of the PDF that reads like a title is used.
+
+**Description fallback.** The Purpose section is also found under headings such as "POLICY PURPOSE" or "Purpose of this Procedure", and reading stops at the next all-capitals heading.
 
 ## Google Vision key
 
@@ -115,6 +133,7 @@ Settings (Setup > Custom Metadata Types > **Doc PDF Agent Setting** > Default): 
 
 ## Change log
 
+- 2026-10-29: AI suggestions first (Prompt Builder template Doc_PDF_Field_Suggestions) with the rules as fallback, AI on/off shown in the review; Template chosen from the document type (CQ numbering); Title falls back to the PDF's first line; Purpose found under headings like POLICY PURPOSE; Category rules for Policy / Procedure / Work Instruction; retry with a clean record when the test number is used.
 - 2026-10-28: Screen Flow version (`screen-flow` branch): flow `Controlled_Document_From_PDF`, components `docPdfFlowUpload`, `docPdfFlowReview`, `docPdfFlowComparison`, action `DocPdfFlowCreateAction`, test `DocPdfFlowTest`. No Agentforce needed.
 - 2026-10-19: Compare a PDF with an existing Controlled Document (version check, comparison, summary, comparison component, agent script path). Review opens straight after the analysis.
 - 2026-10-18: Fields set up in custom metadata; PDF set as Primary Content; test document number fallback. Review screen saves each choice; create reads the saved choices. Upload component saves the chosen PDF; Analyze PDF finds the proposal without an Id.

@@ -44,6 +44,10 @@
     </values>
     <values>
         <field>Help_Text__c</field>
-        <value xsi:type="xsd:string">First sentence of the Purpose section.</value>
+        <value xsi:type="xsd:string">AI summary first; else the first sentence of the Purpose section.</value>
+    </values>
+    <values>
+        <field>AI_Answer__c</field>
+        <value xsi:type="xsd:string">description</value>
     </values>
 </CustomMetadata>

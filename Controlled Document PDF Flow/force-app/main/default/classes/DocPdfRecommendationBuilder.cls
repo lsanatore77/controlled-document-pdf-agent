@@ -10,7 +10,8 @@
  *   Section_Text           the whole section headed PDF Label
  *   Picklist_Match         the labeled value matched to the picklist, then Match Rules,
  *                          then Default Value
- *   Lookup_Match           the labeled value matched to a record Name, then Default Value
+ *   Lookup_Match           the labeled value matched to a record Name (or Document Number),
+ *                          then Match Rules, then Default Value
  *   Fixed_Value            always Default Value (shown fixed)
  *   User_Input             left for the user (picklist and lookup choices offered)
  *
@@ -20,6 +21,12 @@
  *   input    : required and not found: the user must give a value
  *   optional : not found and not required: left blank unless the user picks a value
  *   system   : fixed (Fixed_Value or not Editable), plus the Primary Content row
+ *
+ * AI first: when a field has an AI Answer (title, description, documentType) and the Field
+ * Prompt Template on Doc PDF Agent Setting answers, that value is used (source "Written by AI",
+ * always left for review). When AI is off, fails or gives a value that does not fit the field,
+ * the field falls back to the Value Source rules above, and the note says why.
+ * Default Value {First Line} means: the first line of the PDF that reads like a title.
  *
  * Never invents a value: anything not found in the PDF, the rules or the defaults is left
  * blank. Re-running for the same proposal replaces its rows.
@@ -62,7 +69,11 @@ public with sharing class DocPdfRecommendationBuilder {
         public String defaultValue;
         public String matchRules;
         public String helpText;
+        public String aiAnswer;
     }
+
+    public static final String AI_SOURCE = 'Written by AI';
+    public static final String FIRST_LINE_TOKEN = '{first line}';
 
     /** Tests set this to use their own field list instead of the custom metadata. */
     @TestVisible
@@ -74,6 +85,8 @@ public with sharing class DocPdfRecommendationBuilder {
     private Integer sortOrder = 0;
     private List<Doc_PDF_Field__c> rows = new List<Doc_PDF_Field__c>();
     private List<String> skipped = new List<String>();
+    @TestVisible
+    private DocPdfAiSuggestions.Result ai;
     private Map<String, Schema.SObjectField> cdFields =
         compliancequest__SQX_Controlled_Document__c.SObjectType.getDescribe().fields.getMap();
 
@@ -111,6 +124,17 @@ public with sharing class DocPdfRecommendationBuilder {
 
         String fileName = proposalFileName(proposalId);
         DocPdfRecommendationBuilder b = new DocPdfRecommendationBuilder(proposalId, text, fileName);
+        // AI first, before any record is written (the template call cannot follow uncommitted work).
+        Boolean anyAi = false;
+        for (FieldConfig c : config) {
+            anyAi = anyAi || String.isNotBlank(c.aiAnswer);
+        }
+        if (anyAi) {
+            b.ai = DocPdfAiSuggestions.suggest(text);
+            proposal.AI_Status__c = b.ai.status;
+        } else {
+            proposal.AI_Status__c = 'AI suggestions: not used. No field has an AI Answer in Doc PDF Field Config.';
+        }
         b.addAll(config);
 
         delete [SELECT Id FROM Doc_PDF_Field__c WHERE Proposal__c = :proposalId];
@@ -174,6 +198,7 @@ public with sharing class DocPdfRecommendationBuilder {
             c.defaultValue = m.Default_Value__c;
             c.matchRules = m.Match_Rules__c;
             c.helpText = m.Help_Text__c;
+            c.aiAnswer = String.isBlank(m.AI_Answer__c) ? null : m.AI_Answer__c.trim();
             sorted.add(new ConfigSort(c));
         }
         sorted.sort();
@@ -268,7 +293,8 @@ public with sharing class DocPdfRecommendationBuilder {
         }
 
         String evidence = String.isNotBlank(c.helpText) ? c.helpText : f.evidence;
-        if (String.isNotBlank(c.helpText) && f.value == null && !fixed) {
+        if (String.isNotBlank(c.helpText) && String.isNotBlank(f.evidence) && !fixed
+            && (f.value == null || f.source == AI_SOURCE || String.isNotBlank(f.aiNote))) {
             evidence = c.helpText + ' ' + f.evidence;
         }
         if (fixed && f.value == null) {
@@ -285,9 +311,74 @@ public with sharing class DocPdfRecommendationBuilder {
         Boolean exact = false;
         String source = 'From PDF';
         String evidence;
+        String aiNote;
     }
 
+    /** AI first (when the field has an AI Answer), then the Value Source rules. */
     private Found find(FieldConfig c, Schema.DescribeFieldResult d, String fieldType, List<Option> opts) {
+        String aiNote = null;
+        if (String.isNotBlank(c.aiAnswer) && c.source != 'Fixed_Value' && c.editable != false) {
+            if (ai == null || ai.used != true) {
+                aiNote = 'AI was off, so the rules were used.';
+            } else {
+                String suggested = ai.get(c.aiAnswer);
+                if (String.isBlank(suggested)) {
+                    aiNote = 'AI gave no ' + c.aiAnswer + '.';
+                } else {
+                    Found viaAi = fromAi(c, d, fieldType, opts, suggested);
+                    if (viaAi.value != null) {
+                        return viaAi;
+                    }
+                    aiNote = viaAi.evidence;
+                }
+            }
+        }
+        Found f = findByRules(c, d, fieldType, opts);
+        if (aiNote != null) {
+            f.aiNote = aiNote;
+            f.evidence = (aiNote + ' ' + (f.evidence == null ? '' : f.evidence)).trim().left(255);
+        }
+        return f;
+    }
+
+    /** The AI's suggestion fitted to the field: text as is, picklist / lookup matched (directly or through Match Rules). */
+    private Found fromAi(FieldConfig c, Schema.DescribeFieldResult d, String fieldType, List<Option> opts, String suggested) {
+        Found f = new Found();
+        f.source = AI_SOURCE;
+        f.exact = false;
+        String shown = suggested.left(80);
+        if (opts != null) {
+            Option o = matchOption(opts, suggested, true);
+            if (o == null) {
+                String ruled = applyRulesTo(c.matchRules, suggested);
+                if (ruled != null) {
+                    o = matchOption(opts, ruled, true);
+                    if (o == null && fieldType == 'reference') {
+                        o = findRecord(d, ruled);
+                    }
+                }
+            }
+            if (o == null) {
+                f.evidence = 'AI suggested "' + shown + '", which is not a value of this field.';
+                return f;
+            }
+            f.value = o.value;
+            f.display = o.label;
+            f.evidence = ('Suggested by AI from the PDF ("' + shown + '"). Check it before you accept.').left(255);
+            return f;
+        }
+        String v = fit(suggested, d, fieldType);
+        if (v == null) {
+            f.evidence = 'AI suggested "' + shown + '", which does not fit this field.';
+            return f;
+        }
+        f.value = v;
+        f.display = fieldType == 'date' ? displayDate(v) : null;
+        f.evidence = 'Written by AI from the PDF. Check it before you accept.';
+        return f;
+    }
+
+    private Found findByRules(FieldConfig c, Schema.DescribeFieldResult d, String fieldType, List<Option> opts) {
         Found f = new Found();
         String src = c.source;
         String labelText = String.isBlank(c.pdfLabel) ? null : c.pdfLabel.trim().removeEnd(':');
@@ -371,6 +462,21 @@ public with sharing class DocPdfRecommendationBuilder {
             } else {
                 f.evidence = labelText == null ? 'No PDF label is set up.' : 'No "' + labelText + ':" label in the PDF.';
             }
+            String ruledRecord = applyRules(c.matchRules);
+            if (ruledRecord != null) {
+                Option o = matchOption(opts, ruledRecord, true);
+                if (o == null) {
+                    o = findRecord(d, ruledRecord);
+                }
+                if (o != null) {
+                    f.value = o.value;
+                    f.display = o.label;
+                    f.source = 'By rule';
+                    f.evidence = ('Suggested by rule (' + ruledRecord.left(60) + ').').left(255);
+                    return f;
+                }
+                f.evidence = (f.evidence + ' The rule suggested "' + ruledRecord.left(60) + '", but no record has that name.').left(255);
+            }
             return fallbackToDefault(f, c, d, fieldType, opts);
         }
 
@@ -396,6 +502,17 @@ public with sharing class DocPdfRecommendationBuilder {
             return f;
         }
         String why = f.evidence;
+        if (c.defaultValue.trim().toLowerCase() == FIRST_LINE_TOKEN) {
+            String line = opts == null ? fit(DocPdfFieldParser.firstLineOf(text), d, fieldType) : null;
+            if (line != null) {
+                f.value = line;
+                f.display = null;
+                f.source = 'From PDF text';
+                f.exact = false;
+                f.evidence = ((why == null ? '' : why + ' ') + 'Used the first line of the PDF.').left(255);
+            }
+            return f;
+        }
         setFromDefault(f, c, d, fieldType, opts);
         if (f.value != null) {
             f.source = 'Default';
@@ -440,7 +557,13 @@ public with sharing class DocPdfRecommendationBuilder {
     /** The value of the first Match Rule (regex => value) whose pattern is found in the PDF text. */
     @TestVisible
     private String applyRules(String rules) {
-        if (String.isBlank(rules) || String.isBlank(text)) {
+        return applyRulesTo(rules, text);
+    }
+
+    /** The value of the first Match Rule (regex => value) whose pattern is found in the given text. */
+    @TestVisible
+    private String applyRulesTo(String rules, String subject) {
+        if (String.isBlank(rules) || String.isBlank(subject)) {
             return null;
         }
         for (String line : rules.split('\n')) {
@@ -453,7 +576,7 @@ public with sharing class DocPdfRecommendationBuilder {
                 continue;
             }
             try {
-                if (Pattern.compile(regex).matcher(text).find()) {
+                if (Pattern.compile(regex).matcher(subject).find()) {
                     return value;
                 }
             } catch (Exception e) {
@@ -536,12 +659,52 @@ public with sharing class DocPdfRecommendationBuilder {
         if (!target.fields.getMap().containsKey('name') || !target.isAccessible()) {
             return opts;
         }
-        String soql = 'SELECT Id, Name FROM ' + target.getName()
-            + (targetType == User.SObjectType ? ' WHERE IsActive = true' : '') + ' ORDER BY Name LIMIT 200';
+        Boolean isDoc = targetType == compliancequest__SQX_Controlled_Document__c.SObjectType;
+        String whereClause = targetType == User.SObjectType ? ' WHERE IsActive = true'
+            : isTemplateField(d) ? ' WHERE RecordType.DeveloperName = \'Template_Document\'' : '';
+        String soql = 'SELECT Id, Name' + (isDoc ? ', compliancequest__Document_Number__c' : '') + ' FROM ' + target.getName()
+            + whereClause + ' ORDER BY Name LIMIT 200';
         for (SObject r : Database.query(soql, AccessLevel.USER_MODE)) {
-            opts.add(new Option(r.Id, (String) r.get('Name'), null));
+            opts.add(new Option(r.Id, (String) r.get('Name'),
+                isDoc ? (String) r.get('compliancequest__Document_Number__c') : null));
         }
         return opts;
+    }
+
+    /** The Controlled Document Template field: offer Template Document records only. */
+    private static Boolean isTemplateField(Schema.DescribeFieldResult d) {
+        return d.getName().toLowerCase() == 'compliancequest__document_type__c';
+    }
+
+    /** One record of the looked-up object named (or, for Controlled Documents, numbered) as given; null if none. */
+    @TestVisible
+    private Option findRecord(Schema.DescribeFieldResult d, String nameOrNumber) {
+        List<Schema.SObjectType> targets = d.getReferenceTo();
+        if (targets.isEmpty() || String.isBlank(nameOrNumber)) {
+            return null;
+        }
+        Schema.SObjectType targetType = targets[0];
+        for (Schema.SObjectType t : targets) {
+            if (t == User.SObjectType) {
+                targetType = t;
+            }
+        }
+        if (!targetType.getDescribe().isAccessible() || !targetType.getDescribe().fields.getMap().containsKey('name')) {
+            return null;
+        }
+        String v = nameOrNumber.trim();
+        Boolean isDoc = targetType == compliancequest__SQX_Controlled_Document__c.SObjectType;
+        String soql = 'SELECT Id, Name' + (isDoc ? ', compliancequest__Document_Number__c' : '')
+            + ' FROM ' + targetType.getDescribe().getName()
+            + ' WHERE (Name = :v' + (isDoc ? ' OR compliancequest__Document_Number__c = :v' : '') + ')'
+            + (isDoc && isTemplateField(d) ? ' AND RecordType.DeveloperName = \'Template_Document\'' : '')
+            + ' ORDER BY Name DESC LIMIT 1';
+        List<SObject> found = Database.queryWithBinds(soql, new Map<String, Object>{ 'v' => v }, AccessLevel.USER_MODE);
+        if (found.isEmpty()) {
+            return null;
+        }
+        return new Option(found[0].Id, (String) found[0].get('Name'),
+            isDoc ? (String) found[0].get('compliancequest__Document_Number__c') : null);
     }
 
     /** Exact: value or label equals (ignoring case, or a record type developer name). Else: one contains the other. */

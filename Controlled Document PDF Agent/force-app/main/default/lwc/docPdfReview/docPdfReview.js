@@ -17,6 +17,7 @@ const SOURCE_STYLE = {
     'From PDF': 'chip chip-pdf',
     'From PDF text': 'chip chip-gen',
     'By rule': 'chip chip-rule',
+    'Written by AI': 'chip chip-ai',
     Default: 'chip chip-default',
     'Your input': 'chip chip-user',
     System: 'chip chip-default',
@@ -43,6 +44,7 @@ export default class DocPdfReview extends LightningElement {
     totalPages;
     status;
     createdName;
+    aiStatus;
     rows = [];
     open = {};
     editing;
@@ -76,6 +78,7 @@ export default class DocPdfReview extends LightningElement {
                 this.totalPages = res.totalPages;
                 this.status = res.status;
                 this.createdName = res.createdRecordName;
+                this.aiStatus = res.aiStatus;
                 this.rows = (res.rows || []).map((r) => this.initRow(r));
                 this.notify(false);
             })
@@ -127,6 +130,14 @@ export default class DocPdfReview extends LightningElement {
 
     get ready() {
         return !this.loading && !this.error && !this.alreadyCreated;
+    }
+
+    get hasAiStatus() {
+        return !!this.aiStatus;
+    }
+
+    get aiStatusClass() {
+        return this.aiStatus && this.aiStatus.indexOf('AI suggestions: on') === 0 ? 'ai-status ai-on' : 'ai-status ai-off';
     }
 
     get pagesText() {

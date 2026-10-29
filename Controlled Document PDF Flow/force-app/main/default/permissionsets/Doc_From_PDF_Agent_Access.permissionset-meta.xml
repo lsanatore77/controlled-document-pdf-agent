@@ -20,6 +20,7 @@
     <classAccesses><apexClass>DocPdfCompareAction</apexClass><enabled>true</enabled></classAccesses>
     <classAccesses><apexClass>DocPdfComparisonView</apexClass><enabled>true</enabled></classAccesses>
     <classAccesses><apexClass>DocPdfComparisonController</apexClass><enabled>true</enabled></classAccesses>
+    <classAccesses><apexClass>DocPdfAiSuggestions</apexClass><enabled>true</enabled></classAccesses>
     <classAccesses><apexClass>DocPdfFlowCreateAction</apexClass><enabled>true</enabled></classAccesses>
     <customMetadataTypeAccesses><enabled>true</enabled><name>Doc_PDF_Agent_Setting__mdt</name></customMetadataTypeAccesses>
     <customMetadataTypeAccesses><enabled>true</enabled><name>Doc_PDF_Field_Config__mdt</name></customMetadataTypeAccesses>
@@ -30,6 +31,7 @@
     <fieldPermissions><editable>true</editable><field>Doc_PDF_Proposal__c.Match_Score__c</field><readable>true</readable></fieldPermissions>
     <fieldPermissions><editable>true</editable><field>Doc_PDF_Proposal__c.Comparison_JSON__c</field><readable>true</readable></fieldPermissions>
     <fieldPermissions><editable>true</editable><field>Doc_PDF_Proposal__c.Summary__c</field><readable>true</readable></fieldPermissions>
+    <fieldPermissions><editable>true</editable><field>Doc_PDF_Proposal__c.AI_Status__c</field><readable>true</readable></fieldPermissions>
     <fieldPermissions><editable>true</editable><field>Doc_PDF_Text_Cache__c.Content_Version_Id__c</field><readable>true</readable></fieldPermissions>
     <fieldPermissions><editable>true</editable><field>Doc_PDF_Text_Cache__c.Text__c</field><readable>true</readable></fieldPermissions>
     <fieldPermissions><editable>true</editable><field>Doc_PDF_Text_Cache__c.Pages_Read__c</field><readable>true</readable></fieldPermissions>

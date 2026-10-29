@@ -41,6 +41,7 @@ public with sharing class DocPdfReviewController {
         @AuraEnabled public Integer totalPages;
         @AuraEnabled public String createdRecordId;
         @AuraEnabled public String createdRecordName;
+        @AuraEnabled public String aiStatus;
         @AuraEnabled public List<RowDto> rows = new List<RowDto>();
     }
 
@@ -62,6 +63,7 @@ public with sharing class DocPdfReviewController {
             out.totalPages = p.Total_Pages__c == null ? null : p.Total_Pages__c.intValue();
             out.createdRecordId = p.Created_Record_Id__c;
             out.createdRecordName = p.Created_Record_Name__c;
+            out.aiStatus = p.AI_Status__c;
 
             for (Doc_PDF_Field__c f : [
                 SELECT Id, Field_API_Name__c, Field_Label__c, Section__c, Source__c, Field_Type__c,
@@ -149,14 +151,14 @@ public with sharing class DocPdfReviewController {
             Id pid = Id.valueOf(proposalId.trim());
             ps = [
                 SELECT Id, Name, Status__c, File_Name__c, Pages_Read__c, Total_Pages__c,
-                       Created_Record_Id__c, Created_Record_Name__c
+                       Created_Record_Id__c, Created_Record_Name__c, AI_Status__c
                 FROM Doc_PDF_Proposal__c WHERE Id = :pid WITH USER_MODE LIMIT 1
             ];
         } else {
             Id me = UserInfo.getUserId();
             ps = [
                 SELECT Id, Name, Status__c, File_Name__c, Pages_Read__c, Total_Pages__c,
-                       Created_Record_Id__c, Created_Record_Name__c
+                       Created_Record_Id__c, Created_Record_Name__c, AI_Status__c
                 FROM Doc_PDF_Proposal__c
                 WHERE OwnerId = :me AND Status__c = 'Ready for Review'
                 WITH USER_MODE
