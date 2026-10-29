@@ -16,6 +16,10 @@ const SECTIONS = [
 const SOURCE_STYLE = {
     'From PDF': 'chip chip-pdf',
     'From PDF text': 'chip chip-gen',
+    'From document text': 'chip chip-gen',
+    'Best fit': 'chip chip-rule',
+    'From Category': 'chip chip-rule',
+    Numbering: 'chip chip-rule',
     'By rule': 'chip chip-rule',
     'Written by AI': 'chip chip-ai',
     Default: 'chip chip-default',
@@ -203,7 +207,9 @@ export default class DocPdfReview extends LightningElement {
         const textEdit = !locked && isEditing && !hasOptions;
         const blocked = this.isBlocked(r);
 
-        let valueText = r.display || r.value || '';
+        // Text fields show the whole value (the display copy is cut at 255 characters).
+        const plainText = !hasOptions && (r.fieldType === 'string' || r.fieldType === 'textarea');
+        let valueText = (plainText ? r.value || r.display : r.display || r.value) || '';
         let valueClass = 'value';
         if (locked) {
             valueText = r.proposedDisplay || '';
@@ -212,7 +218,7 @@ export default class DocPdfReview extends LightningElement {
             valueText = 'Will be left blank';
             valueClass = 'value value-muted';
         } else if (r.decision === 'undecided') {
-            valueText = r.proposedDisplay || r.proposedValue || 'No value found';
+            valueText = (plainText ? r.proposedValue || r.proposedDisplay : r.proposedDisplay || r.proposedValue) || 'No value found';
             valueClass = r.proposedValue ? 'value' : 'value value-warn';
         }
         return {
