@@ -48,10 +48,10 @@ global with sharing class DocPdfSelectFileAction {
                     r.success = true;
                     r.proposalId = saved.Id;
                     r.fileName = saved.File_Name__c;
-                    r.message = 'Got it: ' + saved.File_Name__c + '. Reading the PDF now.';
+                    r.message = 'Got it: ' + saved.File_Name__c + '. Reading it now.';
                     return r;
                 }
-                r.message = 'No PDF was chosen. Upload a PDF or pick one from the list, then submit.';
+                r.message = 'No file was chosen. Upload a PDF or Word (.docx) file, or pick one from the list, then submit.';
                 return r;
             }
             Id docId = Id.valueOf(s.contentDocumentId.trim());
@@ -67,8 +67,8 @@ global with sharing class DocPdfSelectFileAction {
                 return r;
             }
             ContentVersion cv = cvs[0];
-            if (cv.FileType != 'PDF') {
-                r.message = cv.Title + ' is not a PDF. Upload or pick a PDF.';
+            if (!DocPdfDocxReader.isSupported(cv.FileType)) {
+                r.message = DocPdfDocxReader.unsupportedMessage(cv.Title, cv.FileType);
                 return r;
             }
 
@@ -97,7 +97,7 @@ global with sharing class DocPdfSelectFileAction {
             r.success = true;
             r.proposalId = proposal.Id;
             r.fileName = cv.Title;
-            r.message = 'Got it: ' + cv.Title + '. Reading the PDF now.';
+            r.message = 'Got it: ' + cv.Title + '. Reading it now.';
         } catch (Exception e) {
             r.message = 'I could not use that file: ' + e.getMessage();
         }

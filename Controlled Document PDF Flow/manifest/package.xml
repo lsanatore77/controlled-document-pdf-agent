@@ -3,6 +3,9 @@
     <types>
         <members>DocPdfAgentTest</members>
         <members>DocPdfAiSuggestions</members>
+        <members>DocPdfWordTest</members>
+        <members>DocPdfNumbering</members>
+        <members>DocPdfDocxReader</members>
         <members>DocPdfAiTest</members>
         <members>DocPdfBuildRecommendationsAction</members>
         <members>DocPdfCompareAction</members>
@@ -83,6 +86,7 @@
         <members>Doc_PDF_Proposal__c.AI_Status__c</members>
         <members>Doc_PDF_Field_Config__mdt.AI_Answer__c</members>
         <members>Doc_PDF_Agent_Setting__mdt.Field_Prompt_Template__c</members>
+        <members>Doc_PDF_Agent_Setting__mdt.Category_Templates__c</members>
         <members>Doc_PDF_Text_Cache__c.Content_Version_Id__c</members>
         <members>Doc_PDF_Text_Cache__c.Text__c</members>
         <members>Doc_PDF_Text_Cache__c.Pages_Read__c</members>

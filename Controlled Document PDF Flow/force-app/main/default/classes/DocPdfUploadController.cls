@@ -46,7 +46,7 @@ public with sharing class DocPdfUploadController {
             for (ContentDocument d : [
                 SELECT Id, Title, ContentSize, LastModifiedDate
                 FROM ContentDocument
-                WHERE FileType = 'PDF' AND OwnerId = :me
+                WHERE FileType IN ('PDF', 'WORD_X') AND OwnerId = :me
                 ORDER BY LastModifiedDate DESC
                 LIMIT 6
             ]) {

@@ -38,4 +38,11 @@
         <field>Field_Prompt_Template__c</field>
         <value xsi:type="xsd:string">Doc_PDF_Field_Suggestions</value>
     </values>
+    <values>
+        <field>Category_Templates__c</field>
+        <value xsi:type="xsd:string">Policy | TMP-POL-000 | POL | Policy Purpose; Principles of this Policy; Definitions; Related
+Procedure | TMP-PROC-000 | PROC | Summary; Requirements; Procedures; Validation
+Work Instruction | TMP-WI-000 | WI | Objective; Scope; Required Personal Protective Equipment (PPE); Procedure; Emergency Procedures
+SOP | TMP-PROC-000 | SOP | Purpose; Scope; Responsibilities; Procedure; References</value>
+    </values>
 </CustomMetadata>

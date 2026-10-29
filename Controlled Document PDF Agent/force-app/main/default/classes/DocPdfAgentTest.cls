@@ -385,7 +385,8 @@ private class DocPdfAgentTest {
             }
             if (hasSop) {
                 Assert.areEqual('SOP', cat.Proposed_Value__c);
-                Assert.areEqual('By rule', cat.Source__c);
+                // By rule, or by the best-fit template when the org's Category Templates list SOP headings.
+                Assert.isTrue(cat.Source__c == 'By rule' || cat.Source__c == DocPdfRecommendationBuilder.BEST_FIT_SOURCE, cat.Source__c);
             }
             Assert.areEqual('Default text', byApi.get('compliancequest__Description__c').Proposed_Value__c);
             Assert.areEqual('Default', byApi.get('compliancequest__Description__c').Source__c);

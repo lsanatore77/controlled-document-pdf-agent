@@ -123,16 +123,38 @@ The PDF is always set as the document's **Primary Content** (`compliancequest__C
 
 Settings (Setup > Custom Metadata Types > **Doc PDF Agent Setting** > Default): Version / Likely Version / Related minimum % shared, Title match minimum %, the PDF labels for document number, title and revision, and the optional prompt template.
 
+## Word files, best-fit template and numbering
+
+- **Word (.docx) uploads.** The upload accepts PDF and Word. A .docx file is read in Apex (`DocPdfDocxReader`: it unzips the file and reads `word/document.xml`), with no Google Vision call. PDFs still go through Google Vision. Old .doc files are refused with a "save as .docx" message. Word files over 4 MB (`DocPdfDocxReader.MAX_BYTES`) are refused with a "compress the pictures" message. The uploaded file, Word or PDF, becomes the Primary Content unchanged.
+- **Category and best-fit template.** The Category comes from AI when it is on. Otherwise, after a "Document Category:" label, the document's headings are compared with each template's sections (Category Templates, below) and the closest one wins, before the keyword Match Rules.
+- **Template follows the Category.** The Template row is the released (Current) template set up for the Category. When the document is created, the Template is taken from the final Category, unless the user picked one themselves (Edit).
+- **Numbering.** ComplianceQuest numbers the document from the template. With no released template, or if ComplianceQuest leaves the number blank, the number is the Category prefix plus the next free number (POL-000004), checked again at Submit across all documents. A document is never saved without a number (the old TEST number is gone).
+- **Description.** AI writes a 2-3 sentence summary. When AI is off, the first 2-3 sentences of the first section found among Purpose, Policy Purpose, Summary, Objective, Scope (Doc PDF Field Config, Description, PDF Label; several headings separated by ;).
+
+**Category Templates** (Setup, Custom Metadata Types, Doc PDF Agent Setting, Default): one line per category.
+
+```
+Category | Template Document Number | Number Prefix | section headings separated by ;
+Policy | TMP-POL-000 | POL | Policy Purpose; Principles of this Policy; Definitions; Related
+Procedure | TMP-PROC-000 | PROC | Summary; Requirements; Procedures; Validation
+Work Instruction | TMP-WI-000 | WI | Objective; Scope; Required Personal Protective Equipment (PPE); Procedure; Emergency Procedures
+SOP | TMP-PROC-000 | SOP | Purpose; Scope; Responsibilities; Procedure; References
+```
+
+Templates must be released (Document Status Current) to be used; ComplianceQuest refuses draft templates.
+
 ## Known limits
 
 - Up to 30 pages per PDF (`GoogleVisionPdfService.maxPages`); both PDFs share the 120-second callout limit in one comparison. Very long documents would need a background job (not built).
-- Word Primary Content cannot be read (Google Vision reads PDFs). Compare uses a PDF Secondary Content when there is one.
+- Word files are read for text only: pictures, text inside pictures, headers and footers are not used for suggestions (they stay in the file). Files over 4 MB are not read; reading large files in the background is planned.
+- Compare reads PDF or Word Primary Content (else a PDF or Word Secondary Content).
 - Section matching relies on headings ("1. Purpose", "Key Updates", known names). Documents without headings are compared as one block.
 - Compare does not start a revision or write Changes / Change Scope; that waits for the "update existing records" work.
 - The text cache is private per user.
 
 ## Change log
 
+- 2026-10-29 (Word): Word (.docx) uploads read in Apex; best-fit template from section headings; Template follows the Category; numbering from the template, else Category prefix plus the next free number (no TEST numbers); 2-3 sentence description fallback; long-text custom metadata read with SOQL (Match Rules past 255 characters now apply).
 - 2026-10-29: AI suggestions first (Prompt Builder template Doc_PDF_Field_Suggestions) with the rules as fallback, AI on/off shown in the review; Template chosen from the document type (CQ numbering); Title falls back to the PDF's first line; Purpose found under headings like POLICY PURPOSE; Category rules for Policy / Procedure / Work Instruction; retry with a clean record when the test number is used.
 - 2026-10-28: Screen Flow version (`screen-flow` branch): flow `Controlled_Document_From_PDF`, components `docPdfFlowUpload`, `docPdfFlowReview`, `docPdfFlowComparison`, action `DocPdfFlowCreateAction`, test `DocPdfFlowTest`. No Agentforce needed.
 - 2026-10-19: Compare a PDF with an existing Controlled Document (version check, comparison, summary, comparison component, agent script path). Review opens straight after the analysis.

@@ -74,7 +74,7 @@ global with sharing class DocPdfCompareAction {
             // ---- the new PDF
             DocPdfResolveProposalAction.Result p = DocPdfResolveProposalAction.resolve(req.proposalId);
             if (p.found != true) {
-                r.message = 'No PDF has been chosen yet. Upload the new PDF or pick one from the list first.';
+                r.message = 'No file has been chosen yet. Upload the new PDF or Word file, or pick one from the list first.';
                 return r;
             }
             r.proposalId = p.proposalId;
@@ -82,7 +82,7 @@ global with sharing class DocPdfCompareAction {
             // ---- the existing document's PDF
             ContentVersion oldCv = currentPdf(doc);
             if (oldCv == null) {
-                r.message = doc.Name + ' has no PDF to compare with. Its Primary Content is missing or is not a PDF, and there is no PDF Secondary Content.';
+                r.message = doc.Name + ' has no PDF or Word file to compare with. Its Primary Content is missing or is another file type, and there is no PDF or Word Secondary Content.';
                 return r;
             }
             if (String.valueOf(oldCv.Id) == p.contentVersionId) {
@@ -248,7 +248,7 @@ global with sharing class DocPdfCompareAction {
                 WITH USER_MODE
                 LIMIT 1
             ];
-            if (!cvs.isEmpty() && cvs[0].FileType == 'PDF') {
+            if (!cvs.isEmpty() && DocPdfDocxReader.isSupported(cvs[0].FileType)) {
                 return cvs[0];
             }
         }

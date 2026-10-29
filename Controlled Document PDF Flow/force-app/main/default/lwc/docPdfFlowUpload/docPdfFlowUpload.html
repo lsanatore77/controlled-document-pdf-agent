@@ -9,16 +9,16 @@
         <template if:true={ready}>
             <div class="title">{headingText}</div>
             <lightning-file-upload
-                label="Upload a PDF"
+                label="Upload a PDF or Word (.docx) file"
                 name="docPdf"
-                accept=".pdf"
+                accept=".pdf,.docx"
                 record-id={proposalId}
                 onuploadfinished={handleUploadFinished}>
             </lightning-file-upload>
 
             <template if:true={hasRecent}>
-                <div class="subhead">Or pick one of your recent PDFs</div>
-                <div class="files" role="group" aria-label="Recent PDFs">
+                <div class="subhead">Or pick one of your recent files</div>
+                <div class="files" role="group" aria-label="Recent files">
                     <template for:each={recentItems} for:item="f">
                         <button key={f.key} type="button" class={f.cls} data-id={f.id}
                                 aria-pressed={f.pressed} onclick={handlePick}>

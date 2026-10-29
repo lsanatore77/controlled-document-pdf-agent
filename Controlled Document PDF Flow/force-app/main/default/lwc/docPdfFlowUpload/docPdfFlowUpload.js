@@ -4,7 +4,7 @@ import start from '@salesforce/apex/DocPdfUploadController.start';
 import selectFile from '@salesforce/apex/DocPdfUploadController.selectFile';
 
 /**
- * Screen Flow component: upload a PDF or pick a recent one.
+ * Screen Flow component: upload a PDF or Word (.docx) file, or pick a recent one.
  * Opens today's draft proposal (DocPdfUploadController.start) so the upload box has a record
  * to attach the file to, saves the choice on the proposal straight away (selectFile), and
  * hands the Proposal Id, file Id and file name to the flow. Next is blocked until the
@@ -42,7 +42,7 @@ export default class DocPdfFlowUpload extends LightningElement {
     }
 
     get headingText() {
-        return this.heading || 'Choose the PDF for the new controlled document';
+        return this.heading || 'Choose the PDF or Word file for the new controlled document';
     }
 
     get ready() {
@@ -123,7 +123,7 @@ export default class DocPdfFlowUpload extends LightningElement {
             return { isValid: false, errorMessage: 'Your file is still being saved. Try again in a moment.' };
         }
         if (!this.saved) {
-            return { isValid: false, errorMessage: this.saveError || 'Upload a PDF or pick one from the list.' };
+            return { isValid: false, errorMessage: this.saveError || 'Upload a PDF or Word (.docx) file, or pick one from the list.' };
         }
         return { isValid: true };
     }

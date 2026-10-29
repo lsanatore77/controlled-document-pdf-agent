@@ -35,6 +35,12 @@ public with sharing class DocPdfRecommendationBuilder {
 
     public static final String CD = 'compliancequest__SQX_Controlled_Document__c';
     public static final String PRIMARY_CONTENT_KEY = 'info:primaryContent';
+    public static final String CATEGORY_FIELD = 'compliancequest__document_category__c';
+    public static final String TEMPLATE_FIELD = 'compliancequest__document_type__c';
+    public static final String NUMBER_FIELD = 'compliancequest__document_number__c';
+    public static final String BEST_FIT_SOURCE = 'Best fit';
+    public static final String FROM_CATEGORY_SOURCE = 'From Category';
+    public static final String NUMBER_SOURCE = 'Numbering';
 
     public class Summary {
         public Boolean success = false;
@@ -85,6 +91,11 @@ public with sharing class DocPdfRecommendationBuilder {
     private Integer sortOrder = 0;
     private List<Doc_PDF_Field__c> rows = new List<Doc_PDF_Field__c>();
     private List<String> skipped = new List<String>();
+    /** The Document Category found (picklist value), used for the template and the number. */
+    private String categoryValue;
+    /** The template set on the Template row, if any. */
+    private Option templateChosen;
+    private Boolean numberConfigured = false;
     @TestVisible
     private DocPdfAiSuggestions.Result ai;
     private Map<String, Schema.SObjectField> cdFields =
@@ -153,7 +164,10 @@ public with sharing class DocPdfRecommendationBuilder {
         }
         String skippedNote = b.skipped.isEmpty() ? '' : ' Skipped from the setup: ' + String.join(b.skipped, '; ') + '.';
         s.success = true;
-        s.message = ('I read ' + pagesRead + (pagesRead == 1 ? ' page' : ' pages') + ' of ' + nvl(fileName, 'the PDF') + '. '
+        String readNote = pagesRead == 1 && totalPages == 1
+            ? 'I read ' + nvl(fileName, 'the file') + '. '
+            : 'I read ' + pagesRead + (pagesRead == 1 ? ' page' : ' pages') + ' of ' + nvl(fileName, 'the PDF') + '. ';
+        s.message = (readNote
             + countText(s.readyCount, 'is ready', 'are ready') + ', '
             + countText(s.reviewCount, 'needs your review', 'need your review') + ' and '
             + countText(s.inputCount, 'needs your input', 'need your input') + '.'
@@ -183,7 +197,12 @@ public with sharing class DocPdfRecommendationBuilder {
             return testConfig;
         }
         List<ConfigSort> sorted = new List<ConfigSort>();
-        for (Doc_PDF_Field_Config__mdt m : Doc_PDF_Field_Config__mdt.getAll().values()) {
+        // SOQL, not getAll(): getAll() returns only the first 255 characters of long text fields (Match Rules).
+        for (Doc_PDF_Field_Config__mdt m : [
+            SELECT DeveloperName, Active__c, Field_API_Name__c, Field_Label__c, Sort_Order__c, Required__c, Editable__c,
+                   Value_Source__c, PDF_Label__c, Default_Value__c, Match_Rules__c, Help_Text__c, AI_Answer__c
+            FROM Doc_PDF_Field_Config__mdt
+        ]) {
             if (m.Active__c != true || String.isBlank(m.Field_API_Name__c)) {
                 continue;
             }
@@ -235,15 +254,25 @@ public with sharing class DocPdfRecommendationBuilder {
                 continue;
             }
             seen.add(key);
+            if (key == NUMBER_FIELD) {
+                numberConfigured = true;
+            }
             try {
                 addConfigured(c);
             } catch (Exception e) {
                 skipped.add(c.apiName + ' (' + e.getMessage() + ')');
             }
         }
+        if (!numberConfigured) {
+            try {
+                addNumberRow();
+            } catch (Exception e) {
+                skipped.add('Document Number (' + e.getMessage() + ')');
+            }
+        }
         addRow(PRIMARY_CONTENT_KEY, 'Primary Content', 'system', 'Fixed', 'info', null,
-            nvl(fileName, 'The uploaded PDF'),
-            'The uploaded PDF becomes the document\'s Primary Content (check-in method: Manual).',
+            nvl(fileName, 'The uploaded file'),
+            'The uploaded file (PDF or Word) becomes the document\'s Primary Content, unchanged (check-in method: Manual).',
             false, null, 'locked');
     }
 
@@ -268,7 +297,16 @@ public with sharing class DocPdfRecommendationBuilder {
             : fieldType == 'reference' ? lookupOptions(d)
             : null;
 
-        Found f = find(c, d, fieldType, opts);
+        Found f = isTemplateField(d) && categoryValue != null ? templateFromCategory(c, d, fieldType, opts) : null;
+        if (f == null) {
+            f = find(c, d, fieldType, opts);
+        }
+        if (apiName.toLowerCase() == CATEGORY_FIELD) {
+            categoryValue = f.value;
+        }
+        if (isTemplateField(d) && f.value != null) {
+            templateChosen = new Option(f.value, f.display, null);
+        }
         Boolean fixed = c.source == 'Fixed_Value' || c.editable == false;
 
         String section;
@@ -364,7 +402,7 @@ public with sharing class DocPdfRecommendationBuilder {
             }
             f.value = o.value;
             f.display = o.label;
-            f.evidence = ('Suggested by AI from the PDF ("' + shown + '"). Check it before you accept.').left(255);
+            f.evidence = ('Suggested by AI from the document ("' + shown + '"). Check it before you accept.').left(255);
             return f;
         }
         String v = fit(suggested, d, fieldType);
@@ -374,8 +412,72 @@ public with sharing class DocPdfRecommendationBuilder {
         }
         f.value = v;
         f.display = fieldType == 'date' ? displayDate(v) : null;
-        f.evidence = 'Written by AI from the PDF. Check it before you accept.';
+        f.evidence = 'Written by AI from the document. Check it before you accept.';
         return f;
+    }
+
+    /** The category whose template sections are found in the document (Category Templates headings). */
+    private Found bestFitCategory(List<Option> opts) {
+        DocPdfNumbering.BestFit bf = DocPdfNumbering.bestFit(text);
+        if (bf == null) {
+            return null;
+        }
+        Option o = matchOption(opts, bf.category, true);
+        if (o == null) {
+            return null;
+        }
+        Found f = new Found();
+        f.value = o.value;
+        f.display = o.label;
+        f.source = BEST_FIT_SOURCE;
+        f.evidence = ('Best-fit template: ' + bf.describe() + '.').left(255);
+        return f;
+    }
+
+    /** The Template follows the Category: the released template set up for it in Category Templates. */
+    private Found templateFromCategory(FieldConfig c, Schema.DescribeFieldResult d, String fieldType, List<Option> opts) {
+        DocPdfNumbering.CategoryTemplate ct = DocPdfNumbering.forCategory(categoryValue);
+        if (ct == null || String.isBlank(ct.templateNumber)) {
+            Found none = new Found();
+            none.source = FROM_CATEGORY_SOURCE;
+            none.evidence = ('No template is set up for Category ' + categoryValue
+                + ' (Category Templates on Doc PDF Agent Setting), so the Document Number below is used.').left(255);
+            return none;
+        }
+        DocPdfNumbering.Template t = DocPdfNumbering.releasedTemplate(ct.templateNumber);
+        Found f = new Found();
+        f.source = FROM_CATEGORY_SOURCE;
+        if (t == null) {
+            f.evidence = ('Template ' + ct.templateNumber + ' for Category ' + categoryValue
+                + ' is not released (Current), so the Document Number below is used.').left(255);
+            return f;
+        }
+        f.value = t.id;
+        f.display = t.name;
+        f.exact = true;
+        f.evidence = ('Template for Category ' + categoryValue + '. ComplianceQuest numbers the document from it. '
+            + 'If you change the Category, the template follows it.').left(255);
+        return f;
+    }
+
+    /** The Document Number row: numbered by the template, else the category prefix plus the next free number. */
+    private void addNumberRow() {
+        Schema.SObjectField nf = cdFields.get(NUMBER_FIELD);
+        if (nf == null || !nf.getDescribe().isCreateable()) {
+            return;
+        }
+        String prefix = DocPdfNumbering.prefixFor(categoryValue);
+        String suggested = DocPdfNumbering.nextNumber(prefix);
+        String evidence;
+        if (templateChosen != null) {
+            evidence = 'ComplianceQuest numbers the document from template ' + templateChosen.label
+                + '. This number is used only if it does not.';
+        } else {
+            evidence = 'No released template for ' + (categoryValue == null ? 'this document' : 'Category ' + categoryValue)
+                + ': next free ' + prefix + ' number. Edit it if you need to; it is checked again when you submit.';
+        }
+        addRow(nf.getDescribe().getName(), 'Document Number', 'review', NUMBER_SOURCE, 'string', suggested, null,
+            evidence.left(255), false, null, 'accept');
     }
 
     private Found findByRules(FieldConfig c, Schema.DescribeFieldResult d, String fieldType, List<Option> opts) {
@@ -400,15 +502,26 @@ public with sharing class DocPdfRecommendationBuilder {
                 f.evidence = 'No section heading is set up for this field.';
                 return f;
             }
-            String body = DocPdfFieldParser.sectionText(text, labelText);
-            String v = src == 'Section_First_Sentence' ? DocPdfFieldParser.firstSentenceOf(body, 600) : body;
-            if (String.isNotBlank(v)) {
-                f.value = fit(v, d, fieldType);
-                f.source = 'From PDF text';
-                f.evidence = (src == 'Section_First_Sentence' ? 'First sentence of the ' : 'The ') + labelText + ' section.';
-                return f;
+            // Several headings may be given, separated by ; (the first one found is used).
+            Boolean longField = d.getLength() >= 1000 || fieldType == 'textarea';
+            for (String heading : labelText.split(';')) {
+                heading = heading.trim().removeEnd(':');
+                if (String.isBlank(heading)) {
+                    continue;
+                }
+                String body = DocPdfFieldParser.sectionText(text, heading);
+                String v = src == 'Section_First_Sentence'
+                    ? (longField ? firstSentencesOf(body, 3, 500) : DocPdfFieldParser.firstSentenceOf(body, 600))
+                    : body;
+                if (String.isNotBlank(v)) {
+                    f.value = fit(v, d, fieldType);
+                    f.source = 'From document text';
+                    f.evidence = (src == 'Section_First_Sentence' ? (longField ? 'First sentences of the ' : 'First sentence of the ') : 'The ')
+                        + heading + ' section.';
+                    return f;
+                }
             }
-            f.evidence = 'No ' + labelText + ' section was found.';
+            f.evidence = 'No ' + labelText.replace(';', ' or') + ' section was found.';
             return fallbackToDefault(f, c, d, fieldType, opts);
         }
 
@@ -427,6 +540,13 @@ public with sharing class DocPdfRecommendationBuilder {
                 f.evidence = 'The PDF says "' + raw.left(80) + '", which is not a value of this field.';
             } else {
                 f.evidence = labelText == null ? 'No PDF label is set up.' : 'No "' + labelText + ':" label in the PDF.';
+            }
+            // Document Category: the template whose sections the document has, before the keyword rules.
+            if (d.getName().toLowerCase() == CATEGORY_FIELD) {
+                Found byTemplate = bestFitCategory(opts);
+                if (byTemplate != null) {
+                    return byTemplate;
+                }
             }
             String ruled = applyRules(c.matchRules);
             if (ruled != null) {
@@ -661,7 +781,7 @@ public with sharing class DocPdfRecommendationBuilder {
         }
         Boolean isDoc = targetType == compliancequest__SQX_Controlled_Document__c.SObjectType;
         String whereClause = targetType == User.SObjectType ? ' WHERE IsActive = true'
-            : isTemplateField(d) ? ' WHERE RecordType.DeveloperName = \'Template_Document\'' : '';
+            : isTemplateField(d) ? ' WHERE RecordType.DeveloperName = \'Template_Document\' AND compliancequest__Document_Status__c = \'Current\'' : '';
         String soql = 'SELECT Id, Name' + (isDoc ? ', compliancequest__Document_Number__c' : '') + ' FROM ' + target.getName()
             + whereClause + ' ORDER BY Name LIMIT 200';
         for (SObject r : Database.query(soql, AccessLevel.USER_MODE)) {
@@ -673,7 +793,7 @@ public with sharing class DocPdfRecommendationBuilder {
 
     /** The Controlled Document Template field: offer Template Document records only. */
     private static Boolean isTemplateField(Schema.DescribeFieldResult d) {
-        return d.getName().toLowerCase() == 'compliancequest__document_type__c';
+        return d.getName().toLowerCase() == TEMPLATE_FIELD;
     }
 
     /** One record of the looked-up object named (or, for Controlled Documents, numbered) as given; null if none. */
@@ -697,7 +817,7 @@ public with sharing class DocPdfRecommendationBuilder {
         String soql = 'SELECT Id, Name' + (isDoc ? ', compliancequest__Document_Number__c' : '')
             + ' FROM ' + targetType.getDescribe().getName()
             + ' WHERE (Name = :v' + (isDoc ? ' OR compliancequest__Document_Number__c = :v' : '') + ')'
-            + (isDoc && isTemplateField(d) ? ' AND RecordType.DeveloperName = \'Template_Document\'' : '')
+            + (isDoc && isTemplateField(d) ? ' AND RecordType.DeveloperName = \'Template_Document\' AND compliancequest__Document_Status__c = \'Current\'' : '')
             + ' ORDER BY Name DESC LIMIT 1';
         List<SObject> found = Database.queryWithBinds(soql, new Map<String, Object>{ 'v' => v }, AccessLevel.USER_MODE);
         if (found.isEmpty()) {
@@ -775,6 +895,34 @@ public with sharing class DocPdfRecommendationBuilder {
         if (section == 'optional') { return 'clear'; }
         if (section == 'ready') { return value == null ? 'clear' : 'accept'; }
         return 'undecided';
+    }
+
+    /** Up to n whole sentences from the start of s, within maxLen characters (at least the first sentence). */
+    @TestVisible
+    private static String firstSentencesOf(String s, Integer n, Integer maxLen) {
+        if (String.isBlank(s)) {
+            return null;
+        }
+        String flat = s.normalizeSpace();
+        String out = '';
+        Integer start = 0;
+        for (Integer i = 0; i < n && start < flat.length(); i++) {
+            Integer cut = flat.indexOf('. ', start);
+            String next = cut < 0 ? flat.substring(start) : flat.substring(start, cut + 1);
+            String candidate = (out + ' ' + next).trim();
+            if (out.length() > 0 && candidate.length() > maxLen) {
+                break;
+            }
+            out = candidate;
+            if (cut < 0) {
+                break;
+            }
+            start = cut + 2;
+        }
+        if (out.length() > maxLen) {
+            out = out.substring(0, maxLen - 1).trim() + '…';
+        }
+        return out.trim();
     }
 
     private static String displayDate(String iso) {

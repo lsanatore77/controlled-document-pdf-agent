@@ -32,7 +32,7 @@
     </values>
     <values>
         <field>PDF_Label__c</field>
-        <value xsi:type="xsd:string">Purpose</value>
+        <value xsi:type="xsd:string">Purpose; Policy Purpose; Summary; Objective; Scope</value>
     </values>
     <values>
         <field>Default_Value__c</field>
@@ -44,7 +44,7 @@
     </values>
     <values>
         <field>Help_Text__c</field>
-        <value xsi:type="xsd:string">AI summary first; else the first sentence of the Purpose section.</value>
+        <value xsi:type="xsd:string">AI writes a 2-3 sentence summary; else the first sentences of the Purpose, Summary or Objective section.</value>
     </values>
     <values>
         <field>AI_Answer__c</field>

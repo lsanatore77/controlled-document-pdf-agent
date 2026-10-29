@@ -12,8 +12,11 @@
  *   5. links the PDF to the new record and sets it as the document's Primary Content,
  *   6. marks the proposal Created.
  * Fixed rows (Doc PDF Field Config: Fixed Value or not Editable) are written as set up.
- * If ComplianceQuest rejects the record and no Document Number was given, it retries once
- * with a test number (TEST-yyyyMMdd-HHmmss).
+ * Numbering: the Template follows the final Document Category (Category Templates on Doc PDF
+ * Agent Setting) unless the user picked a template themselves; ComplianceQuest numbers the document
+ * from it. With no released template, or when ComplianceQuest leaves the number blank, the Document
+ * Number row is used (the category prefix plus the next free number, checked again here).
+ * A document is never saved without a number.
  */
 global with sharing class DocPdfCreateDocumentAction {
 
@@ -108,7 +111,7 @@ global with sharing class DocPdfCreateDocumentAction {
             Integer setCount = 0;
             Integer blankCount = 0;
             for (Doc_PDF_Field__c f : rows) {
-                if (!isRecordField(f)) {
+                if (!isRecordField(f) || isNumberingField(f)) {
                     continue;
                 }
                 String v = f.Final_Value__c;
@@ -132,40 +135,69 @@ global with sharing class DocPdfCreateDocumentAction {
                 }
             }
 
-            String testNumber;
-            // The values set above, kept so a retry can start from a clean record: ComplianceQuest's
-            // triggers may have changed the first attempt's record in memory (its name was then not built).
+            // ---- template and number
+            NumberPlan plan = planNumber(rows);
+            Schema.SObjectField templateField = fieldMap.get(DocPdfRecommendationBuilder.TEMPLATE_FIELD);
+            Schema.SObjectField numberField = fieldMap.get(DocPdfRecommendationBuilder.NUMBER_FIELD);
+            if (plan.templateId != null && templateField != null && templateField.getDescribe().isCreateable()) {
+                doc.put(templateField, plan.templateId);
+            } else {
+                plan.templateId = null;
+            }
+            // The values set so far, kept so a retry can start from a clean record: ComplianceQuest's
+            // triggers may have changed the first attempt's record in memory.
             Map<String, Object> setValues = new Map<String, Object>(doc.getPopulatedFieldsAsMap());
-            Savepoint sp = Database.setSavepoint();
-            try {
-                insert as user doc;
-            } catch (DmlException e) {
-                Database.rollback(sp);
-                Schema.SObjectField numberField = fieldMap.get('compliancequest__document_number__c');
-                Boolean canRetry = numberField != null && numberField.getDescribe().isCreateable()
-                    && String.isBlank((String) doc.get(numberField));
-                String firstError = e.getDmlMessage(0);
-                if (canRetry) {
-                    // ComplianceQuest did not number it: this is a test app, so use a made-up number.
-                    testNumber = 'TEST-' + Datetime.now().format('yyyyMMdd-HHmmss');
-                    doc = freshCopy(setValues);
-                    doc.put(numberField, testNumber);
-                    Savepoint sp2 = Database.setSavepoint();
-                    try {
-                        insert as user doc;
-                    } catch (DmlException e2) {
-                        Database.rollback(sp2);
-                        update as user rows;
-                        r.summary = 'ComplianceQuest did not accept the new document: ' + firstError
-                            + ' (Also tried with test number ' + testNumber + ': ' + e2.getDmlMessage(0) + ')'
-                            + ' Change the value in the review and submit again.';
-                        return r;
+            String usedNumber;
+            String firstError;
+            Boolean saved = false;
+            if (plan.templateId != null) {
+                // ComplianceQuest numbers it from the template.
+                Savepoint sp = Database.setSavepoint();
+                try {
+                    insert as user doc;
+                    String assigned = (String) [
+                        SELECT compliancequest__Document_Number__c FROM compliancequest__SQX_Controlled_Document__c
+                        WHERE Id = :doc.Id LIMIT 1
+                    ].compliancequest__Document_Number__c;
+                    if (String.isBlank(assigned)) {
+                        Database.rollback(sp);
+                        firstError = 'ComplianceQuest did not number it from template ' + plan.templateName + '.';
+                    } else {
+                        saved = true;
                     }
-                } else {
+                } catch (DmlException e) {
+                    Database.rollback(sp);
+                    firstError = e.getDmlMessage(0);
+                }
+            }
+            if (!saved) {
+                if (numberField == null || !numberField.getDescribe().isCreateable()) {
                     update as user rows;
-                    r.summary = 'ComplianceQuest did not accept the new document: ' + firstError
-                        + ' Change the value in the review and submit again.';
+                    r.summary = 'ComplianceQuest did not accept the new document' + (firstError == null ? '.' : ': ' + firstError)
+                        + ' You cannot set the Document Number, so nothing was created.';
                     return r;
+                }
+                usedNumber = DocPdfNumbering.freeNumber(plan.wantedNumber, plan.prefix);
+                doc = freshCopy(setValues);
+                doc.put(numberField, usedNumber);
+                Savepoint sp2 = Database.setSavepoint();
+                try {
+                    insert as user doc;
+                } catch (DmlException e2) {
+                    Database.rollback(sp2);
+                    update as user rows;
+                    r.summary = 'ComplianceQuest did not accept the new document: '
+                        + (firstError == null ? '' : firstError + ' Then, with number ' + usedNumber + ': ')
+                        + e2.getDmlMessage(0) + ' Change the value in the review and submit again.';
+                    return r;
+                }
+            }
+            for (Doc_PDF_Field__c f : rows) {
+                String api = f.Field_API_Name__c == null ? '' : f.Field_API_Name__c.toLowerCase();
+                if (api == DocPdfRecommendationBuilder.NUMBER_FIELD) {
+                    f.Outcome__c = usedNumber == null ? 'Numbered by the template' : ('Set: ' + usedNumber).left(255);
+                } else if (api == DocPdfRecommendationBuilder.TEMPLATE_FIELD) {
+                    f.Outcome__c = plan.templateId == null ? 'Left blank' : ('Set: ' + plan.templateName).left(255);
                 }
             }
 
@@ -220,10 +252,15 @@ global with sharing class DocPdfCreateDocumentAction {
             if (reqOk > 0) {
                 s += ' Added ' + reqOk + (reqOk == 1 ? ' training requirement.' : ' training requirements.');
             }
-            if (testNumber != null) {
-                s += ' ComplianceQuest did not number the document, so it has the test number ' + testNumber + '.';
+            if (usedNumber == null) {
+                s += ' ComplianceQuest numbered it from template ' + plan.templateName + '.';
+            } else {
+                s += ' Its number is ' + usedNumber + (firstError != null
+                    ? ', used because ComplianceQuest did not number it (' + firstError + ').'
+                    : usedNumber == plan.wantedNumber ? ', from your review.'
+                    : ', the next free ' + usedNumber.substringBeforeLast('-') + ' number.');
             }
-            s += primarySet ? ' The PDF is the document\'s Primary Content.' : (fileLinked ? ' The PDF is attached to the record.' : '');
+            s += primarySet ? ' The uploaded file is the document\'s Primary Content.' : (fileLinked ? ' The uploaded file is attached to the record.' : '');
             if (!notes.isEmpty()) {
                 s += ' Not done: ' + String.join(notes, ' ');
             }
@@ -281,6 +318,73 @@ global with sharing class DocPdfCreateDocumentAction {
             return true;
         }
         return f.Required__c == true && String.isBlank(f.Final_Value__c);
+    }
+
+    /** The template and number to use, from the final review values. */
+    public class NumberPlan {
+        public Id templateId;
+        public String templateName;
+        public String category;
+        public String prefix;
+        public String wantedNumber;
+    }
+
+    private static Boolean isNumberingField(Doc_PDF_Field__c f) {
+        String api = f.Field_API_Name__c == null ? '' : f.Field_API_Name__c.toLowerCase();
+        return api == DocPdfRecommendationBuilder.TEMPLATE_FIELD || api == DocPdfRecommendationBuilder.NUMBER_FIELD;
+    }
+
+    /**
+     * Template: the one the user picked (Edit), else the released template for the final Category,
+     * else the reviewed value. Number: the one the user typed (Edit), else the next free number for
+     * the final Category's prefix.
+     */
+    @TestVisible
+    private static NumberPlan planNumber(List<Doc_PDF_Field__c> rows) {
+        NumberPlan p = new NumberPlan();
+        Doc_PDF_Field__c templateRow;
+        Doc_PDF_Field__c numberRow;
+        for (Doc_PDF_Field__c f : rows) {
+            String api = f.Field_API_Name__c == null ? '' : f.Field_API_Name__c.toLowerCase();
+            if (api == DocPdfRecommendationBuilder.CATEGORY_FIELD) {
+                p.category = f.Final_Value__c;
+            } else if (api == DocPdfRecommendationBuilder.TEMPLATE_FIELD) {
+                templateRow = f;
+            } else if (api == DocPdfRecommendationBuilder.NUMBER_FIELD) {
+                numberRow = f;
+            }
+        }
+        p.prefix = DocPdfNumbering.prefixFor(p.category);
+
+        if (templateRow != null && templateRow.Decision__c == 'edit') {
+            setTemplate(p, templateRow.Final_Value__c, templateRow.Final_Display__c);
+        } else {
+            DocPdfNumbering.Template t = DocPdfNumbering.templateForCategory(p.category);
+            if (t != null) {
+                p.templateId = t.id;
+                p.templateName = t.name;
+            } else if (templateRow != null && DocPdfNumbering.forCategory(p.category) == null) {
+                // No template set up for this category: keep what the review says.
+                setTemplate(p, templateRow.Final_Value__c, templateRow.Final_Display__c);
+            }
+        }
+
+        if (numberRow != null && numberRow.Decision__c == 'edit' && String.isNotBlank(numberRow.Final_Value__c)) {
+            p.wantedNumber = numberRow.Final_Value__c.trim();
+        }
+        return p;
+    }
+
+    private static void setTemplate(NumberPlan p, String value, String display) {
+        if (String.isBlank(value)) {
+            return;
+        }
+        try {
+            p.templateId = Id.valueOf(value);
+            p.templateName = String.isBlank(display) ? value : display;
+        } catch (Exception e) {
+            p.templateId = null;
+        }
     }
 
     /** A new Controlled Document with only the given field values (no Id, nothing a trigger set). */

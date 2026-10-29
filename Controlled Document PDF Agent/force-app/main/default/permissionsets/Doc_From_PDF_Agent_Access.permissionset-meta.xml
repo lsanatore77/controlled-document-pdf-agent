@@ -21,6 +21,8 @@
     <classAccesses><apexClass>DocPdfComparisonView</apexClass><enabled>true</enabled></classAccesses>
     <classAccesses><apexClass>DocPdfComparisonController</apexClass><enabled>true</enabled></classAccesses>
     <classAccesses><apexClass>DocPdfAiSuggestions</apexClass><enabled>true</enabled></classAccesses>
+    <classAccesses><apexClass>DocPdfNumbering</apexClass><enabled>true</enabled></classAccesses>
+    <classAccesses><apexClass>DocPdfDocxReader</apexClass><enabled>true</enabled></classAccesses>
     <customMetadataTypeAccesses><enabled>true</enabled><name>Doc_PDF_Agent_Setting__mdt</name></customMetadataTypeAccesses>
     <customMetadataTypeAccesses><enabled>true</enabled><name>Doc_PDF_Field_Config__mdt</name></customMetadataTypeAccesses>
     <fieldPermissions><editable>true</editable><field>Doc_PDF_Proposal__c.Mode__c</field><readable>true</readable></fieldPermissions>

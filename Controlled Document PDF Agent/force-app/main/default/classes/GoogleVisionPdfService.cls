@@ -33,6 +33,8 @@ public with sharing class GoogleVisionPdfService {
         public Integer totalPages = 0;
         public String fileName;
         public String message;
+        /** True when the file is Word (.docx), read in Apex. */
+        public Boolean isWord = false;
     }
 
     public static Extraction extract(Id contentVersionId) {
@@ -42,7 +44,7 @@ public with sharing class GoogleVisionPdfService {
             return ex;
         }
         List<ContentVersion> cvs = [
-            SELECT Id, Title, FileType, VersionData
+            SELECT Id, Title, FileType, ContentSize
             FROM ContentVersion
             WHERE Id = :contentVersionId
             WITH USER_MODE
@@ -54,12 +56,35 @@ public with sharing class GoogleVisionPdfService {
         }
         ContentVersion cv = cvs[0];
         ex.fileName = cv.Title;
+        if (DocPdfDocxReader.isWord(cv.FileType)) {
+            // Word (.docx): read in Apex, no Google Vision call.
+            if (cv.ContentSize != null && cv.ContentSize > DocPdfDocxReader.MAX_BYTES) {
+                ex.message = cv.Title + ' is too large to read here (' + (cv.ContentSize / 1048576) + ' MB; the limit is '
+                    + (DocPdfDocxReader.MAX_BYTES / 1048576) + ' MB). Large pictures make Word files big: compress the pictures '
+                    + '(in Word: Picture Format, Compress Pictures) or remove some, and upload it again.';
+                return ex;
+            }
+            try {
+                ex.text = DocPdfDocxReader.readText(versionData(cv.Id));
+            } catch (Exception e) {
+                ex.message = e.getMessage();
+                return ex;
+            }
+            ex.isWord = true;
+            ex.pagesRead = 1;
+            ex.totalPages = 1;
+            ex.success = String.isNotBlank(ex.text);
+            if (!ex.success) {
+                ex.message = 'The Word file has no text to read.';
+            }
+            return ex;
+        }
         if (cv.FileType != 'PDF') {
-            ex.message = 'That file is not a PDF (' + cv.FileType + ').';
+            ex.message = DocPdfDocxReader.unsupportedMessage(cv.Title, cv.FileType);
             return ex;
         }
 
-        String content = EncodingUtil.base64Encode(cv.VersionData);
+        String content = EncodingUtil.base64Encode(versionData(cv.Id));
         Long started = System.currentTimeMillis();
         List<String> pageTexts = new List<String>();
         Integer firstPage = 1;
@@ -120,6 +145,10 @@ public with sharing class GoogleVisionPdfService {
             ex.message = 'Google Vision returned no text for this file.';
         }
         return ex;
+    }
+
+    private static Blob versionData(Id cvId) {
+        return [SELECT VersionData FROM ContentVersion WHERE Id = :cvId WITH USER_MODE LIMIT 1].VersionData;
     }
 
     private static HttpResponse send(String content, List<Integer> pages, Integer timeoutMs) {

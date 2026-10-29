@@ -219,7 +219,7 @@
     </assignments>
     <choices>
         <name>choiceCompare</name>
-        <choiceText>Compare a new PDF with this document</choiceText>
+        <choiceText>Compare a new PDF or Word file with this document</choiceText>
         <dataType>String</dataType>
         <value>
             <stringValue>compare</stringValue>
@@ -227,7 +227,7 @@
     </choices>
     <choices>
         <name>choiceCreate</name>
-        <choiceText>Create a new controlled document from a PDF</choiceText>
+        <choiceText>Create a new controlled document from a PDF or Word file</choiceText>
         <dataType>String</dataType>
         <value>
             <stringValue>create</stringValue>
@@ -407,7 +407,7 @@
     <formulas>
         <name>fxUploadHeading</name>
         <dataType>String</dataType>
-        <expression>IF({!varMode} = "compare", "Choose the new PDF to compare with this document", "Choose the PDF for the new controlled document")</expression>
+        <expression>IF({!varMode} = "compare", "Choose the new PDF or Word file to compare with this document", "Choose the PDF or Word file for the new controlled document")</expression>
     </formulas>
     <formulas>
         <name>fxRecordUrl</name>
@@ -461,7 +461,7 @@
     </screens>
     <screens>
         <name>Upload_PDF_Screen</name>
-        <label>Upload PDF</label>
+        <label>Upload File</label>
         <locationX>440</locationX>
         <locationY>350</locationY>
         <allowBack>true</allowBack>
@@ -548,7 +548,7 @@
         <allowPause>false</allowPause>
         <fields>
             <name>Done_Text</name>
-            <fieldText>&lt;p&gt;&lt;strong&gt;{!varDocumentName}&lt;/strong&gt; was created as a Draft Controlled Document, with the PDF as its Primary Content.&lt;/p&gt;&lt;p&gt;{!varCreateSummary}&lt;/p&gt;&lt;p&gt;&lt;a href="{!fxRecordUrl}" target="_blank"&gt;Open {!varDocumentName}&lt;/a&gt;&lt;/p&gt;</fieldText>
+            <fieldText>&lt;p&gt;&lt;strong&gt;{!varDocumentName}&lt;/strong&gt; was created as a Draft Controlled Document, with the uploaded file as its Primary Content.&lt;/p&gt;&lt;p&gt;{!varCreateSummary}&lt;/p&gt;&lt;p&gt;&lt;a href="{!fxRecordUrl}" target="_blank"&gt;Open {!varDocumentName}&lt;/a&gt;&lt;/p&gt;</fieldText>
             <fieldType>DisplayText</fieldType>
         </fields>
         <nextOrFinishButtonLabel>Done</nextOrFinishButtonLabel>
@@ -603,7 +603,7 @@
             <defaultValue>
                 <booleanValue>false</booleanValue>
             </defaultValue>
-            <fieldText>Compare anyway (this PDF may not be a version of this document)</fieldText>
+            <fieldText>Compare anyway (this file may not be a version of this document)</fieldText>
             <fieldType>InputField</fieldType>
             <isRequired>true</isRequired>
             <visibilityRule>
@@ -639,7 +639,7 @@
     <subflows>
         <description>Reads the PDF with Google Vision and stores a recommended value for each field (Doc_From_PDF_Analyze).</description>
         <name>Analyze_PDF</name>
-        <label>Read PDF and Build Recommendations</label>
+        <label>Read File and Build Recommendations</label>
         <locationX>440</locationX>
         <locationY>590</locationY>
         <connector>

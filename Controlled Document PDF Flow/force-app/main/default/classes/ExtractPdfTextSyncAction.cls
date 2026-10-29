@@ -30,7 +30,7 @@ public with sharing class ExtractPdfTextSyncAction {
 
     @InvocableMethod(
         label='Extract PDF Text Now (Google Vision)'
-        description='Reads the text of a PDF with Google Cloud Vision and returns it in the same call. Reads every page, 5 pages per request.'
+        description='Reads the text of a PDF (Google Cloud Vision, 5 pages per request) or a Word .docx file (read in Apex) and returns it in the same call.'
         callout=true
     )
     public static List<Result> run(List<Request> requests) {
@@ -50,7 +50,7 @@ public with sharing class ExtractPdfTextSyncAction {
                 r.extractedText = '';
                 r.pagesRead = 0;
                 r.totalPages = 0;
-                r.message = 'The PDF could not be read: ' + e.getMessage();
+                r.message = 'The file could not be read: ' + e.getMessage();
             }
             out.add(r);
         }
