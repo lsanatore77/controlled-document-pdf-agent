@@ -18,7 +18,7 @@ The agent script is `Controlled_Document_Agent_Script.txt` (also in `reference/C
 | Compare | `DocPdfCompareAction`, `DocPdfMatchService` (version check), `DocPdfCompareService` (comparison and summary), `docPdfComparison` LWC + `docPdfComparisonType`, `DocPdfComparisonController`, `DocPdfComparisonView`, custom metadata `Doc_PDF_Agent_Setting__mdt` (record Default) |
 | Data | `Doc_PDF_Proposal__c` (one run: the file, the text, the result; Mode Create or Compare), `Doc_PDF_Field__c` (one recommended field), `Doc_PDF_Text_Cache__c` (text read from a file version, so the existing document is not re-read for every comparison) |
 | Access | Permission set `Doc_From_PDF_Agent_Access` |
-| Tests | `DocPdfAgentTest`, `DocPdfExtractionTest`, `DocPdfCompareTest` |
+| Tests | `DocPdfAgentTest`, `DocPdfExtractionTest`, `DocPdfCompareTest`, `DocPdfWordTest`, `DocPdfAiTest`, `DocPdfReviewGuardTest` |
 
 ## Deploy
 
@@ -28,10 +28,10 @@ From this folder, with the Salesforce CLI logged in to the target org:
 sf project deploy start --manifest manifest/package.xml --test-level NoTestRun
 ```
 
-Sandboxes can skip tests. For production, run the three test classes:
+Sandboxes can skip tests. For production, run the test classes:
 
 ```
-sf project deploy start --manifest manifest/package.xml --test-level RunSpecifiedTests --tests DocPdfAgentTest DocPdfExtractionTest DocPdfCompareTest
+sf project deploy start --manifest manifest/package.xml --test-level RunSpecifiedTests --tests DocPdfAgentTest DocPdfExtractionTest DocPdfCompareTest DocPdfWordTest DocPdfAiTest DocPdfReviewGuardTest
 ```
 
 Then:

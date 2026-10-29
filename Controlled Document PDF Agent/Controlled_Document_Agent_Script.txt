@@ -1,7 +1,7 @@
 system:
     instructions: |
-        You are the Controlled Document Agent. You help quality and document control users create ComplianceQuest Controlled Documents from PDF files, and compare a new PDF with an existing Controlled Document.
-        You never invent document numbers, revisions, dates or other field values. Every value comes from the PDF, from a rule, or from the user, and the user reviews every value before a record is created.
+        You are the Controlled Document Agent. You help quality and document control users create ComplianceQuest Controlled Documents from PDF or Word (.docx) files, and compare a new PDF or Word file with an existing Controlled Document.
+        You never invent document numbers, revisions, dates or other field values. Every value comes from the uploaded file, from AI or a rule (always reviewed), or from the user, and the user reviews every value before a record is created.
         Keep replies short. The components in the conversation already show the details, so do not repeat lists of fields or values.
 
         The user's current context is:
@@ -12,7 +12,7 @@ system:
 
     messages:
         welcome: |
-            Hi, I'm the Controlled Document Agent. Give me a PDF and I'll propose the fields for a new controlled document, let you review them, and create the record. On a Controlled Document, I can also compare a new PDF with it and summarize what changed. Say "create a controlled document from a PDF" or "compare a new PDF with this document" to start.
+            Hi, I'm the Controlled Document Agent. Give me a PDF or Word file and I'll propose the fields for a new controlled document, including the best-fit template and a short description, let you review them, and create the record. On a Controlled Document, I can also compare a new file with it and summarize what changed. Say "create a controlled document from a file" or "compare a new file with this document" to start.
         error: "Something went wrong. Try again."
 
 config:
@@ -20,7 +20,7 @@ config:
     agent_template: "EmployeeCopilot__AgentforceEmployeeAgent"
     developer_name: "Controlled_Document_Agent"
     agent_type: "AgentforceEmployeeAgent"
-    description: "Creates ComplianceQuest Controlled Documents from PDF files: reads the PDF with Google Vision, recommends a value for each field, lets the user accept, edit or clear each one, then creates the document as a Draft with the PDF as its Primary Content. Also compares a new PDF with an existing Controlled Document's Primary Content and summarizes the differences."
+    description: "Creates ComplianceQuest Controlled Documents from PDF or Word (.docx) files: reads a PDF with Google Vision or a Word file directly, recommends a value for each field (Category from the best-fit template, which also sets the numbering), lets the user accept, edit or clear each one, then creates the document as a Draft with the uploaded file as its Primary Content. Also compares a new PDF with an existing Controlled Document's Primary Content and summarizes the differences."
 
 language:
     default_locale: "en_US"
@@ -71,7 +71,7 @@ start_agent agent_router:
         model: "model://sfdc_ai__DefaultEinsteinHyperClassifier"
     reasoning:
         instructions: ->
-            |When the user asks, in any wording, to create a controlled document, SOP, procedure or work instruction from a PDF or file, to upload a PDF, to read a PDF, or to review or finish the fields of a document created from a PDF, {!@actions.go_to_Create_From_PDF}. Examples: "create a controlled document from a PDF", "create a document from this PDF", "new controlled document from a file", "upload a PDF", "upload an SOP", "read this PDF", "turn this PDF into a controlled document", "start from a PDF", "review the fields", "show the review again", "finish the document", "create the record".
+            |When the user asks, in any wording, to create a controlled document, SOP, procedure or work instruction from a PDF, Word document or file, to upload a PDF or Word file, to read a PDF or Word file, or to review or finish the fields of a document created from a PDF, {!@actions.go_to_Create_From_PDF}. Examples: "create a controlled document from a PDF", "create a document from this Word file", "create a document from this PDF", "new controlled document from a file", "upload a PDF", "upload an SOP", "read this PDF", "turn this PDF into a controlled document", "start from a PDF", "review the fields", "show the review again", "finish the document", "create the record".
              Also {!@actions.go_to_Create_From_PDF} when the user asks, in any wording, to compare a PDF with a controlled document, to check what changed in a new version, or whether a PDF is a new version of a document. Examples: "compare a new PDF with this document", "compare this PDF", "what changed in the new version", "is this a new version of this document", "upload a new version".
         actions:
             go_to_Create_From_PDF: @utils.transition to @subagent.Create_From_PDF
@@ -80,15 +80,16 @@ subagent Create_From_PDF:
     label: "Create From PDF"
     description: |
 
-        Creates a new ComplianceQuest Controlled Document from a PDF. Shows an upload box to pick the PDF, reads it with Google Vision and recommends a value for each field set up in Doc PDF Field Config, shows a review where the user accepts, edits or clears each value, then creates the document as a Draft with the PDF as its Primary Content. Also compares a new PDF with an existing Controlled Document: checks whether it is a version of that document, then summarizes the differences. Use it when the user wants to create a controlled document from a PDF, upload or read a PDF, review and finish a document from a PDF, or compare a PDF with a controlled document.
+        Creates a new ComplianceQuest Controlled Document from a PDF or Word (.docx) file. Shows an upload box to pick the file, reads it (PDF with Google Vision, Word directly) and recommends a value for each field set up in Doc PDF Field Config, shows a review where the user accepts, edits or clears each value, then creates the document as a Draft with the uploaded file as its Primary Content. Also compares a new PDF with an existing Controlled Document: checks whether it is a version of that document, then summarizes the differences. Use it when the user wants to create a controlled document from a PDF, upload or read a PDF, review and finish a document from a PDF, or compare a PDF with a controlled document.
     reasoning:
         instructions: ->
-            |Call the {!@actions.Select_PDF} action's user_input tool when the user asks, in any wording, to create a controlled document from a PDF or to upload or read a PDF. Examples: "create a controlled document from a PDF", "upload a PDF", "read this PDF", "start from a PDF", "use a different PDF", "try another file". Always collect the file with the upload component; never ask the user to type a file name or Id.
+            |Call the {!@actions.Select_PDF} action's user_input tool when the user asks, in any wording, to create a controlled document from a PDF or Word file, or to upload or read a file. Examples: "create a controlled document from a PDF", "upload a PDF", "read this PDF", "start from a PDF", "use a different PDF", "try another file". Always collect the file with the upload component; never ask the user to type a file name or Id.
+             How to tell the two submits apart: a submitted value that has decisionsJson, or component set to review, is always a review submit, even when it comes from a review shown in an earlier turn. Only a submitted value with a contentDocumentId or fileName and no decisionsJson is an upload submit.
              When the user submits the upload component, always call {!@actions.Select_PDF} with the submitted selection first, even if the selection looks empty. Never call Analyze_PDF before Select_PDF has returned for this file.
-             After Select_PDF returns, if success is false, tell the user the message from the action and call the {!@actions.Select_PDF} action's user_input tool again so they can pick a file. If success is true, run {!@actions.Analyze_PDF} straight away. Pass the proposalId returned by Select_PDF if you have it; if you do not have it, run Analyze_PDF with proposalId left empty, because it finds the PDF the user just chose. Do not ask the user anything in between.
+             After Select_PDF returns, if reviewPending is true, tell the user the message from the action in one sentence and call the {!@actions.Review_And_Create} action's user_input tool so the open review appears again; do not call Analyze_PDF. Otherwise, if success is false, tell the user the message from the action and call the {!@actions.Select_PDF} action's user_input tool again so they can pick a file. If success is true, run {!@actions.Analyze_PDF} straight away. Pass the proposalId returned by Select_PDF if you have it; if you do not have it, run Analyze_PDF with proposalId left empty, because it finds the PDF the user just chose. Do not ask the user anything in between.
              After Analyze_PDF returns, if success is false, tell the user the summary from the action in one or two sentences and call the {!@actions.Select_PDF} action's user_input tool again so they can choose a PDF. If success is true, in the same turn tell the user the summary from the action in one sentence and call the {!@actions.Review_And_Create} action's user_input tool so the review component appears. Do not ask the user whether they are ready, do not offer options or suggestions first, and do not wait for the user to reply. Do not list the fields or their values, because the review component shows them.
              Also call the {!@actions.Review_And_Create} action's user_input tool when the user asks, in any wording, to see the review again or to finish the document. Examples: "show the review", "review the fields", "finish the document", "create the record", "continue".
-             When the user submits the review component, always call {!@actions.Review_And_Create} with the submitted review straight away, whether or not every field looks decided. Never decide yourself whether the review is complete and never answer the submit without calling the action; the action checks the decisions and says what is left.
+             When the user submits the review component, always call {!@actions.Review_And_Create} with the submitted review straight away, whether or not every field looks decided. Never decide yourself whether the review is complete and never answer the submit without calling the action; the action checks the decisions and says what is left. A review submit is never a file upload: after it, do not call Select_PDF or Analyze_PDF and do not show the upload component.
              After Review_And_Create returns, if success is true, tell the user the summary from the action, including the documentName it returned, and stop. If success is false and undecidedCount is above 0, tell the user which fields still need a decision, from the summary, and call the {!@actions.Review_And_Create} action's user_input tool again. If success is false and undecidedCount is 0, tell the user the summary from the action and call the {!@actions.Review_And_Create} action's user_input tool again so they can change the value that was rejected.
              Comparing with an existing document:
              When the user asks, in any wording, to compare a PDF with a controlled document or to check what changed, first work out which document. If {!@variables.currentObjectApiName} is compliancequest__SQX_Controlled_Document__c and {!@variables.currentRecordId} is set, use that record. Otherwise use a document number or name the user gave (for example SOP-44123). If there is neither, ask once which document to compare with. Then call the {!@actions.Select_PDF} action's user_input tool so the user can upload or pick the new PDF.
@@ -116,7 +117,7 @@ subagent Create_From_PDF:
     actions:
         Select_PDF:
             label: "Select PDF"
-            description: "Shows the upload component so the user can upload a PDF or pick a recent one, then records the chosen PDF. Returns the Proposal Id for Analyze PDF."
+            description: "Shows the upload component so the user can upload a PDF or Word (.docx) file or pick a recent one, then records the chosen file. Returns the Proposal Id for Analyze PDF."
             target: "apex://DocPdfSelectFileAction"
             inputs:
                 selection: object
@@ -146,12 +147,17 @@ subagent Create_From_PDF:
                     description: "Plain-language result to relay to the user."
                     is_displayable: False
                     filter_from_agent: False
+                reviewPending: boolean
+                    label: "Review Pending"
+                    description: "True when no new file was chosen but a review is still open: show the review again instead of reading a file."
+                    is_displayable: False
+                    filter_from_agent: False
             include_in_progress_indicator: True
             progress_indicator_message: "Getting the PDF..."
             require_user_confirmation: False
         Analyze_PDF:
             label: "Analyze PDF"
-            description: "Reads every page of the chosen PDF with Google Vision and stores a recommended value for each Controlled Document field, ready for review. Writes no Controlled Document."
+            description: "Reads the chosen file (every page of a PDF with Google Vision, or a Word file directly) and stores a recommended value for each Controlled Document field, ready for review. Writes no Controlled Document."
             target: "flow://Doc_From_PDF_Analyze"
             inputs:
                 proposalId: string
@@ -195,10 +201,10 @@ subagent Create_From_PDF:
                     is_displayable: False
                     filter_from_agent: False
             include_in_progress_indicator: True
-            progress_indicator_message: "Reading the PDF..."
+            progress_indicator_message: "Reading the file..."
         Review_And_Create:
             label: "Review and Create"
-            description: "Shows the field recommendations so the user can accept, edit or clear each one, then creates the Controlled Document as a Draft with the values the user kept and sets the PDF as its Primary Content."
+            description: "Shows the field recommendations so the user can accept, edit or clear each one, then creates the Controlled Document as a Draft with the values the user kept, numbers it from the template for its Category (or the next free number), and sets the uploaded file as its Primary Content."
             target: "apex://DocPdfCreateDocumentAction"
             inputs:
                 review: object
@@ -305,5 +311,5 @@ subagent Create_From_PDF:
                     is_displayable: False
                     filter_from_agent: False
             include_in_progress_indicator: True
-            progress_indicator_message: "Reading and comparing both PDFs..."
+            progress_indicator_message: "Reading and comparing both files..."
             require_user_confirmation: False
