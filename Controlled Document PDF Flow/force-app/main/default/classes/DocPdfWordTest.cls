@@ -244,6 +244,29 @@ private class DocPdfWordTest {
     }
 
     @IsTest
+    static void namesADocumentLeftWithItsId() {
+        Id fakeId = UserInfo.getUserId();
+        compliancequest__SQX_Controlled_Document__c d = (compliancequest__SQX_Controlled_Document__c)
+            JSON.deserialize(JSON.serialize(new Map<String, Object>{
+                'attributes' => new Map<String, Object>{ 'type' => 'compliancequest__SQX_Controlled_Document__c' },
+                'Name' => String.valueOf(fakeId).left(15),
+                'compliancequest__Document_Number__c' => 'WI-000001',
+                'compliancequest__Revision__c' => '001'
+            }), compliancequest__SQX_Controlled_Document__c.class);
+        // Without an Id the name is only checked for being blank or set.
+        Assert.isNull(DocPdfCreateDocumentAction.nameFor(d));
+        d.Name = null;
+        Assert.areEqual('WI-000001[001]', DocPdfCreateDocumentAction.nameFor(d));
+        d.compliancequest__Revision__c = null;
+        Assert.areEqual('WI-000001', DocPdfCreateDocumentAction.nameFor(d));
+        d.Name = 'WI-000001[001]';
+        Assert.isNull(DocPdfCreateDocumentAction.nameFor(d));
+        d.Name = null;
+        d.compliancequest__Document_Number__c = null;
+        Assert.isNull(DocPdfCreateDocumentAction.nameFor(d));
+    }
+
+    @IsTest
     static void planFollowsTheFinalCategory() {
         DocPdfNumbering.testLines = LINES;
         List<Doc_PDF_Field__c> rows = new List<Doc_PDF_Field__c>{

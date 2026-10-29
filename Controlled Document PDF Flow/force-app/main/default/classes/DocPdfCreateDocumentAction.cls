@@ -234,7 +234,7 @@ global with sharing class DocPdfCreateDocumentAction {
                 }
             }
 
-            String name = [SELECT Name FROM compliancequest__SQX_Controlled_Document__c WHERE Id = :doc.Id LIMIT 1].Name;
+            String name = nameRecord(doc.Id);
             proposal.Status__c = 'Created';
             proposal.Created_Record_Id__c = doc.Id;
             proposal.Created_Record_Name__c = name == null ? null : name.left(80);
@@ -385,6 +385,47 @@ global with sharing class DocPdfCreateDocumentAction {
         } catch (Exception e) {
             p.templateId = null;
         }
+    }
+
+    /**
+     * The record's Name. Some orgs' ComplianceQuest leaves the Name as the record Id; then it is set to
+     * Document Number[Revision], as ComplianceQuest names documents (POL-000001[001]).
+     */
+    @TestVisible
+    private static String nameRecord(Id docId) {
+        compliancequest__SQX_Controlled_Document__c d = [
+            SELECT Id, Name, compliancequest__Document_Number__c, compliancequest__Revision__c
+            FROM compliancequest__SQX_Controlled_Document__c WHERE Id = :docId LIMIT 1
+        ];
+        String wanted = nameFor(d);
+        if (wanted == null) {
+            return d.Name;
+        }
+        try {
+            compliancequest__SQX_Controlled_Document__c upd = new compliancequest__SQX_Controlled_Document__c(Id = d.Id, Name = wanted);
+            // ComplianceQuest's Document And Rev field, when it can be set (it is blank in the same orgs).
+            Schema.SObjectField andRev = compliancequest__SQX_Controlled_Document__c.SObjectType.getDescribe()
+                .fields.getMap().get('compliancequest__document_and_rev__c');
+            if (andRev != null && andRev.getDescribe().isUpdateable()) {
+                upd.put(andRev, wanted);
+            }
+            update as user upd;
+            return wanted;
+        } catch (Exception e) {
+            return d.Name;
+        }
+    }
+
+    /** Document Number[Revision] when the Name is still the record Id; null when the Name is fine. */
+    @TestVisible
+    private static String nameFor(compliancequest__SQX_Controlled_Document__c d) {
+        String idName = d.Id == null ? null : String.valueOf(d.Id);
+        Boolean nameIsId = String.isBlank(d.Name) || (idName != null && (d.Name == idName || d.Name == idName.left(15)));
+        if (!nameIsId || String.isBlank(d.compliancequest__Document_Number__c)) {
+            return null;
+        }
+        String rev = d.compliancequest__Revision__c;
+        return (d.compliancequest__Document_Number__c + (String.isBlank(rev) ? '' : '[' + rev + ']')).left(80);
     }
 
     /** A new Controlled Document with only the given field values (no Id, nothing a trigger set). */
