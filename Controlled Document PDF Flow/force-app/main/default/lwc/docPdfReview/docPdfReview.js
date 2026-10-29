@@ -7,26 +7,31 @@ const SAVE_DELAY_MS = 400;
 const SECTIONS = [
     { key: 'input', title: 'Needs your input', open: true },
     { key: 'review', title: 'Needs review', open: true },
-    { key: 'ready', title: 'Ready', open: false },
-    { key: 'optional', title: 'Not in the PDF', open: false },
+    { key: 'ready', title: 'Found in the file', open: true },
+    { key: 'optional', title: 'Not found in the file', open: false },
     { key: 'related', title: 'Related records', open: false },
-    { key: 'system', title: 'Set automatically', open: true }
+    { key: 'system', title: 'Set automatically', open: true, cards: true }
 ];
 
-const SOURCE_STYLE = {
-    'From PDF': 'chip chip-pdf',
-    'From PDF text': 'chip chip-gen',
-    'From document text': 'chip chip-gen',
-    'Best fit': 'chip chip-rule',
-    'From Category': 'chip chip-rule',
-    Numbering: 'chip chip-rule',
-    'By rule': 'chip chip-rule',
-    'Written by AI': 'chip chip-ai',
-    Default: 'chip chip-default',
-    'Your input': 'chip chip-user',
-    System: 'chip chip-default',
-    Fixed: 'chip chip-default'
+// Short tag shown next to each field, and its colour.
+const SOURCES = {
+    'Written by AI': { label: 'AI', cls: 'chip chip-ai' },
+    'From PDF': { label: 'From the file', cls: 'chip chip-file' },
+    'From PDF text': { label: 'From the text', cls: 'chip chip-file' },
+    'From document text': { label: 'From the text', cls: 'chip chip-file' },
+    'Best fit': { label: 'Best fit', cls: 'chip chip-rule' },
+    'From Category': { label: 'From category', cls: 'chip chip-rule' },
+    Numbering: { label: 'Numbering', cls: 'chip chip-rule' },
+    'By rule': { label: 'Rule', cls: 'chip chip-rule' },
+    Default: { label: 'Default', cls: 'chip chip-default' },
+    'Your input': { label: 'Your choice', cls: 'chip chip-user' },
+    System: { label: 'Set automatically', cls: 'chip chip-default' },
+    Fixed: { label: 'Fixed', cls: 'chip chip-default' }
 };
+
+const CATEGORY_FIELD = 'compliancequest__document_category__c';
+const TEMPLATE_FIELD = 'compliancequest__document_type__c';
+const NUMBER_FIELD = 'compliancequest__document_number__c';
 
 /**
  * Review editor for the agent (lightning__AgentforceInput, type c__docPdfReviewType).
@@ -140,12 +145,21 @@ export default class DocPdfReview extends LightningElement {
         return !!this.aiStatus;
     }
 
-    get aiStatusClass() {
-        return this.aiStatus && this.aiStatus.indexOf('AI suggestions: on') === 0 ? 'ai-status ai-on' : 'ai-status ai-off';
+    get aiOn() {
+        return !!this.aiStatus && this.aiStatus.indexOf('AI suggestions: on') === 0;
+    }
+
+    get aiPillClass() {
+        return this.aiOn ? 'ai-pill ai-on' : 'ai-pill ai-off';
+    }
+
+    get aiPillText() {
+        return this.aiOn ? 'AI suggestions on' : 'AI suggestions off';
     }
 
     get pagesText() {
-        if (this.pagesRead == null) {
+        // A Word file is read as one block: no page count to show.
+        if (this.pagesRead == null || (this.pagesRead === 1 && this.totalPages === 1)) {
             return '';
         }
         const all = this.totalPages == null || this.pagesRead >= this.totalPages;
@@ -155,16 +169,58 @@ export default class DocPdfReview extends LightningElement {
     get progressStyle() {
         const total = this.decidable.length || 1;
         const pct = Math.round(((total - this.leftCount) / total) * 100);
-        return 'width:' + pct + '%;background:' + (this.leftCount ? '#0b5cab' : '#2e844a');
+        return 'width:' + pct + '%;background:' + (this.leftCount ? '#0176d3' : '#2e844a');
     }
 
     get progressText() {
-        const n = this.leftCount;
-        return n ? n + (n === 1 ? ' decision left' : ' decisions left') : 'Everything is decided. Submit to create the record.';
+        const total = this.decidable.length;
+        return total - this.leftCount + ' of ' + total + (total === 1 ? ' field decided' : ' fields decided');
     }
 
-    get progressClass() {
-        return this.leftCount ? 'progress-text warn' : 'progress-text ok';
+    get footText() {
+        const n = this.leftCount;
+        if (!n) {
+            return 'Everything is decided. Submit to create the document.';
+        }
+        const names = this.rows.filter((r) => this.isBlocked(r)).map((r) => r.label);
+        return (n === 1 ? '1 field still needs a decision: ' : n + ' fields still need a decision: ')
+            + names.join(', ') + '. Nothing is created until they do.';
+    }
+
+    get footIcon() {
+        return this.leftCount ? 'utility:info' : 'utility:success';
+    }
+
+    // ------------------------------------------------------------------ what will be created
+
+    rowFor(apiName) {
+        return this.rows.find((r) => (r.apiName || '').toLowerCase() === apiName);
+    }
+
+    currentText(r) {
+        if (!r || r.decision === 'clear') {
+            return null;
+        }
+        if (r.decision === 'undecided') {
+            return r.proposedDisplay || r.proposedValue;
+        }
+        return r.display || r.value;
+    }
+
+    get summaryCategory() {
+        return this.currentText(this.rowFor(CATEGORY_FIELD)) || 'Not set';
+    }
+
+    get summaryTemplate() {
+        return this.currentText(this.rowFor(TEMPLATE_FIELD)) || 'None';
+    }
+
+    get summaryNumber() {
+        const template = this.currentText(this.rowFor(TEMPLATE_FIELD));
+        if (template) {
+            return 'From the template';
+        }
+        return this.currentText(this.rowFor(NUMBER_FIELD)) || 'Not set';
     }
 
     get acceptAllDisabled() {
@@ -179,7 +235,7 @@ export default class DocPdfReview extends LightningElement {
             let countText = String(rows.length);
             let countClass = 'count';
             if (left > 0) {
-                countText = left + ' left';
+                countText = left + ' to decide';
                 countClass = 'count count-warn';
             } else if ((s.key === 'input' || s.key === 'review') && rows.length) {
                 countText = 'Done';
@@ -188,6 +244,7 @@ export default class DocPdfReview extends LightningElement {
             return {
                 key: s.key,
                 title: s.title,
+                isCards: s.cards === true,
                 isOpen,
                 expanded: isOpen ? 'true' : 'false',
                 chevron: isOpen ? 'utility:chevrondown' : 'utility:chevronright',
@@ -213,34 +270,37 @@ export default class DocPdfReview extends LightningElement {
         let valueClass = 'value';
         if (locked) {
             valueText = r.proposedDisplay || '';
-            valueClass = 'value value-muted';
         } else if (r.decision === 'clear') {
-            valueText = 'Will be left blank';
+            valueText = 'Rejected: will be left blank';
             valueClass = 'value value-muted';
         } else if (r.decision === 'undecided') {
             valueText = (plainText ? r.proposedValue || r.proposedDisplay : r.proposedDisplay || r.proposedValue) || 'No value found';
-            valueClass = r.proposedValue ? 'value' : 'value value-warn';
+            valueClass = r.proposedValue ? 'value' : 'value value-muted';
         }
+        const source = r.decision === 'edit' ? SOURCES['Your input'] : SOURCES[r.source];
+        const accepted = r.decision === 'accept' || r.decision === 'edit';
         return {
             ...r,
             key: r.id,
             isRequired: r.required === true,
-            sourceClass: SOURCE_STYLE[r.source] || 'chip chip-default',
+            sourceLabel: source ? source.label : r.source,
+            sourceClass: source ? source.cls : 'chip chip-default',
             showActions: !locked && !this.readOnly,
             showValue: !pickInline && !textEdit,
+            valueEditable: !locked && !this.readOnly,
             valueText,
             valueClass,
-            rowClass: blocked ? 'row row-blocked' : r.decision === 'clear' ? 'row row-cleared' : 'row',
-            acceptClass: r.decision === 'accept' ? 'act act-accept-on' : 'act',
-            editClass: r.decision === 'edit' ? 'act act-edit-on' : 'act',
-            clearClass: r.decision === 'clear' ? 'act act-clear-on' : 'act',
-            acceptPressed: r.decision === 'accept' ? 'true' : 'false',
-            editPressed: r.decision === 'edit' ? 'true' : 'false',
-            clearPressed: r.decision === 'clear' ? 'true' : 'false',
-            acceptDisabled: !r.proposedValue,
+            blocked,
+            acceptClass: accepted ? 'act act-accept-on' : 'act',
+            rejectClass: r.decision === 'clear' ? 'act act-reject-on' : 'act',
+            acceptPressed: accepted ? 'true' : 'false',
+            rejectPressed: r.decision === 'clear' ? 'true' : 'false',
+            acceptDisabled: !r.proposedValue && r.decision !== 'edit',
             acceptLabel: 'Accept ' + r.label,
-            editLabel: 'Edit ' + r.label,
-            clearLabel: 'Leave ' + r.label + ' blank',
+            editLabel: 'Change ' + r.label,
+            rejectLabel: 'Reject ' + r.label + ' (leave it blank)',
+            isEditing: textEdit,
+            canRestore: textEdit && !!r.proposedValue,
             pickInline,
             options: r.options.map((o, i) => {
                 const on = r.value === o.value && r.decision !== 'clear' && r.decision !== 'undecided';
