@@ -90,6 +90,7 @@ button.value:hover .value-pencil, button.value:focus-visible .value-pencil { opa
 
 /* Footer */
 .foot { padding: 1rem 1.5rem; border-top: 1px solid #e5e5e5; background: #fafaf9; display: flex; align-items: center; gap: 0.75rem; font-size: 0.8125rem; color: #3e3e3c; }
+.foot-text { flex: 1; min-width: 0; }
 
 @media (max-width: 30rem) {
     .summary, .cards, .opts { grid-template-columns: minmax(0, 1fr); }

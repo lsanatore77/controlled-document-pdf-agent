@@ -161,7 +161,8 @@
 
             <div class="foot">
                 <lightning-icon icon-name={footIcon} size="xx-small" alternative-text=""></lightning-icon>
-                <span>{footText}</span>
+                <span class="foot-text">{footText}</span>
+                <button type="button" class="btn-outline" onclick={handleAcceptAll} disabled={acceptAllDisabled}>Accept all</button>
             </div>
         </template>
     </div>
