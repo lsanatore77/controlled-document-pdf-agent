@@ -6,3 +6,7 @@ Salesforce SFDX project for the Agentforce **Controlled Document Agent** (Compli
 - compare a new PDF with an existing Controlled Document (version check, section-by-section comparison, summary).
 
 The project is in [`Controlled Document PDF Agent/`](Controlled%20Document%20PDF%20Agent/). Start with its `README.md`; the agent script is `Controlled_Document_Agent_Script.txt`.
+
+## Screen Flow version (branch `screen-flow`)
+
+The same features as a Screen Flow with embedded components, no Agentforce needed: [`Controlled Document PDF Flow/`](Controlled%20Document%20PDF%20Flow/). It is a standalone project; start with its `README.md`.

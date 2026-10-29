@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Controlled Document Agent settings for comparing a PDF with an existing document. The agent uses the record named Default.</description>
+    <label>Doc PDF Agent Setting</label>
+    <pluralLabel>Doc PDF Agent Settings</pluralLabel>
+    <visibility>Public</visibility>
+</CustomObject>

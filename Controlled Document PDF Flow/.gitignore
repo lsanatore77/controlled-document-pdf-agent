@@ -1,0 +1,17 @@
+# Salesforce cache
+.sf/
+.sfdx/
+.localdevserver/
+deploy-options.json
+
+# Logs and dependencies
+logs
+*.log
+node_modules/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/launch.json
+*.code-workspace

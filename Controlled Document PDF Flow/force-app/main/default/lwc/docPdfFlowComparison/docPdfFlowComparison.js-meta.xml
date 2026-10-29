@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>66.0</apiVersion>
+    <isExposed>true</isExposed>
+    <masterLabel>Doc PDF Flow Comparison</masterLabel>
+    <description>Screen Flow: whether the PDF is a version of the Controlled Document, and what changed.</description>
+    <targets>
+        <target>lightning__FlowScreen</target>
+    </targets>
+    <targetConfigs>
+        <targetConfig targets="lightning__FlowScreen">
+            <property name="proposalId" type="String" role="inputOnly" label="Proposal Id"/>
+        </targetConfig>
+    </targetConfigs>
+</LightningComponentBundle>

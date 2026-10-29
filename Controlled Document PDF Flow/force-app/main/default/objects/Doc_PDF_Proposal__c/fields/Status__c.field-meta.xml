@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Status__c</fullName>
+    <label>Status</label>
+    <description>Draft (file chosen) &gt; Ready for Review &gt; Created. Compared for a comparison with an existing document. Failed when the PDF could not be read.</description>
+    <type>Picklist</type>
+    <required>false</required>
+    <trackHistory>true</trackHistory>
+    <trackTrending>false</trackTrending>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value><fullName>Draft</fullName><default>true</default><label>Draft</label></value>
+            <value><fullName>Ready for Review</fullName><default>false</default><label>Ready for Review</label></value>
+            <value><fullName>Created</fullName><default>false</default><label>Created</label></value>
+            <value><fullName>Failed</fullName><default>false</default><label>Failed</label></value>
+            <value><fullName>Compared</fullName><default>false</default><label>Compared</label></value>
+            <value><fullName>Cancelled</fullName><default>false</default><label>Cancelled</label></value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>PDF_Label__c</fullName>
+    <description>Labeled Value and Picklist or Lookup Match: the label in the PDF without the colon (Title). Section sources: the section heading (Purpose).</description>
+    <externalId>false</externalId>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+    <inlineHelpText>Labeled Value and Picklist or Lookup Match: the label in the PDF without the colon (Title). Section sources: the section heading (Purpose).</inlineHelpText>
+    <label>PDF Label or Section</label>
+    <length>255</length>
+    <required>false</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>
