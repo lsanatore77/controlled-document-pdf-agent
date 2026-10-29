@@ -15,4 +15,7 @@ global class DocPdfReview {
 
     @AuraEnabled @InvocableVariable(label='Ready To Create' description='True when nothing is left to decide.')
     global Boolean readyToCreate;
+
+    @AuraEnabled @InvocableVariable(label='Component' description='Always "review": marks this as a review submit, never a file upload.')
+    global String component;
 }

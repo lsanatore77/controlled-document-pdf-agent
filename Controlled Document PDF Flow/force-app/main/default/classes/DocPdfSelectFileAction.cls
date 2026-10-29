@@ -18,6 +18,7 @@ global with sharing class DocPdfSelectFileAction {
         @InvocableVariable(label='Proposal Id' description='Pass this to the Analyze PDF flow.') global String proposalId;
         @InvocableVariable(label='File Name') global String fileName;
         @InvocableVariable(label='Message' description='Plain-language result to relay to the user.') global String message;
+        @InvocableVariable(label='Review Pending' description='True when no new file was chosen but a review is still open: show the review again instead of reading a file.') global Boolean reviewPending;
     }
 
     @InvocableMethod(
@@ -40,8 +41,16 @@ global with sharing class DocPdfSelectFileAction {
     public static Result runOne(DocPdfFileSelection s) {
         Result r = new Result();
         r.success = false;
+        r.reviewPending = false;
         try {
             if (s == null || String.isBlank(s.contentDocumentId)) {
+                // Safety net: a review submit sent here by mistake carries no file. If the
+                // proposal it names is already waiting for review, never start a new one.
+                Doc_PDF_Proposal__c open = String.isNotBlank(s == null ? null : s.proposalId)
+                    ? awaitingReview(s.proposalId) : null;
+                if (open != null) {
+                    return reviewPending(r, open);
+                }
                 // The component already saved the choice: use it.
                 Doc_PDF_Proposal__c saved = DocPdfResolveProposalAction.latestWithFile();
                 if (saved != null) {
@@ -50,6 +59,10 @@ global with sharing class DocPdfSelectFileAction {
                     r.fileName = saved.File_Name__c;
                     r.message = 'Got it: ' + saved.File_Name__c + '. Reading it now.';
                     return r;
+                }
+                open = awaitingReview(null);
+                if (open != null) {
+                    return reviewPending(r, open);
                 }
                 r.message = 'No file was chosen. Upload a PDF or Word (.docx) file, or pick one from the list, then submit.';
                 return r;
@@ -102,5 +115,47 @@ global with sharing class DocPdfSelectFileAction {
             r.message = 'I could not use that file: ' + e.getMessage();
         }
         return r;
+    }
+
+    private static Result reviewPending(Result r, Doc_PDF_Proposal__c open) {
+        r.reviewPending = true;
+        r.proposalId = open.Id;
+        r.fileName = open.File_Name__c;
+        r.message = 'Your review of ' + open.File_Name__c + ' is still open and nothing has been created yet. '
+            + 'Submit the review to create the document, or upload a different file.';
+        return r;
+    }
+
+    /**
+     * A proposal that has been read and is waiting for the user's review: the one given,
+     * or else the running user's most recent one from the last 24 hours.
+     */
+    @TestVisible
+    private static Doc_PDF_Proposal__c awaitingReview(String proposalId) {
+        if (String.isNotBlank(proposalId)) {
+            Id pid;
+            try {
+                pid = Id.valueOf(proposalId.trim());
+            } catch (Exception e) {
+                return null;
+            }
+            List<Doc_PDF_Proposal__c> given = [
+                SELECT Id, File_Name__c FROM Doc_PDF_Proposal__c
+                WHERE Id = :pid AND Status__c = 'Ready for Review'
+                WITH USER_MODE
+                LIMIT 1
+            ];
+            return given.isEmpty() ? null : given[0];
+        }
+        Id me = UserInfo.getUserId();
+        List<Doc_PDF_Proposal__c> ps = [
+            SELECT Id, File_Name__c FROM Doc_PDF_Proposal__c
+            WHERE OwnerId = :me AND Status__c = 'Ready for Review'
+            AND LastModifiedDate = LAST_N_DAYS:1
+            WITH USER_MODE
+            ORDER BY LastModifiedDate DESC
+            LIMIT 1
+        ];
+        return ps.isEmpty() ? null : ps[0];
     }
 }

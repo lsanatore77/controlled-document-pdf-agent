@@ -4,6 +4,7 @@
         <members>DocPdfAgentTest</members>
         <members>DocPdfAiSuggestions</members>
         <members>DocPdfWordTest</members>
+        <members>DocPdfReviewGuardTest</members>
         <members>DocPdfNumbering</members>
         <members>DocPdfDocxReader</members>
         <members>DocPdfAiTest</members>

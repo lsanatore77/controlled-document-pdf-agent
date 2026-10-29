@@ -405,7 +405,8 @@ export default class DocPdfReview extends LightningElement {
             .map((r) => ({ id: r.id, decision: r.decision, value: r.value || null, display: r.display || null }));
         const decisionsJson = JSON.stringify(decisions);
         // readyToCreate is left out on purpose: the Create action decides, and lists what is left.
-        const value = { proposalId: this.proposalId, decisionsJson };
+        // component: 'review' tells the agent this is a review submit, never a file upload.
+        const value = { proposalId: this.proposalId, decisionsJson, component: 'review' };
         this._value = value;
         this.dispatchEvent(new CustomEvent('valuechange', { detail: { value } }));
         if (save) {
