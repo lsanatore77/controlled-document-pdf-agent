@@ -5,8 +5,24 @@
 @IsTest
 private class DocPdfReviewGuardTest {
 
+    /** The running user with the package permission set, like the other Doc PDF tests. */
+    private static User agentUser() {
+        User me = new User(Id = UserInfo.getUserId());
+        System.runAs(me) {
+            List<PermissionSet> ps = [SELECT Id FROM PermissionSet WHERE Name = 'Doc_From_PDF_Agent_Access' LIMIT 1];
+            if (!ps.isEmpty() && [
+                SELECT COUNT() FROM PermissionSetAssignment
+                WHERE AssigneeId = :me.Id AND PermissionSetId = :ps[0].Id
+            ] == 0) {
+                insert new PermissionSetAssignment(AssigneeId = me.Id, PermissionSetId = ps[0].Id);
+            }
+        }
+        return me;
+    }
+
     @IsTest
     static void reviewSubmitSentToSelectDoesNotStartOver() {
+        System.runAs(agentUser()) {
         Doc_PDF_Proposal__c open = new Doc_PDF_Proposal__c(Status__c = 'Ready for Review', File_Name__c = 'Open Review');
         insert open;
         Integer before = [SELECT COUNT() FROM Doc_PDF_Proposal__c];
@@ -31,13 +47,16 @@ private class DocPdfReviewGuardTest {
         DocPdfReview review = new DocPdfReview();
         review.component = 'review';
         Assert.areEqual('review', review.component);
+        }
     }
 
     @IsTest
     static void nothingOpenStillAsksForAFile() {
+        System.runAs(agentUser()) {
         DocPdfSelectFileAction.Result r = DocPdfSelectFileAction.runOne(new DocPdfFileSelection());
         Assert.isFalse(r.success);
         Assert.isFalse(r.reviewPending);
         Assert.isTrue(r.message.startsWith('No file was chosen'), '' + r.message);
+        }
     }
 }
