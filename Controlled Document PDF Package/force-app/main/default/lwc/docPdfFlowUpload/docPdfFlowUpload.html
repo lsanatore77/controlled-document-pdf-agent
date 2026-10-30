@@ -1,0 +1,45 @@
+<template>
+    <div class="wrap">
+        <template if:true={loading}>
+            <div class="muted">Getting ready...</div>
+        </template>
+        <template if:true={error}>
+            <div class="error">{error}</div>
+        </template>
+        <template if:true={ready}>
+            <div class="title">{headingText}</div>
+            <lightning-file-upload
+                label="Upload a PDF or Word (.docx) file"
+                name="docPdf"
+                accept=".pdf,.docx"
+                record-id={proposalId}
+                onuploadfinished={handleUploadFinished}>
+            </lightning-file-upload>
+
+            <template if:true={hasRecent}>
+                <div class="subhead">Or pick one of your recent files</div>
+                <div class="files" role="group" aria-label="Recent files">
+                    <template for:each={recentItems} for:item="f">
+                        <button key={f.key} type="button" class={f.cls} data-id={f.id}
+                                aria-pressed={f.pressed} onclick={handlePick}>
+                            <span class="file-name">{f.title}</span>
+                            <span class="file-meta">{f.meta}</span>
+                        </button>
+                    </template>
+                </div>
+            </template>
+
+            <div aria-live="polite">
+                <template if:true={saving}>
+                    <div class="muted">Saving your choice...</div>
+                </template>
+                <template if:true={saveError}>
+                    <div class="error">{saveError}</div>
+                </template>
+                <template if:true={hasSelection}>
+                    <div class="chosen">Selected: <strong>{fileName}</strong>. Select Next to read it.</div>
+                </template>
+            </div>
+        </template>
+    </div>
+</template>

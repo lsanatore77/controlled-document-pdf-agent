@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Proposal__c</fullName>
+    <label>Proposal</label>
+    <type>MasterDetail</type>
+    <referenceTo>Doc_PDF_Proposal__c</referenceTo>
+    <relationshipLabel>Fields</relationshipLabel>
+    <relationshipName>Fields</relationshipName>
+    <relationshipOrder>0</relationshipOrder>
+    <reparentableMasterDetail>false</reparentableMasterDetail>
+    <writeRequiresMasterRead>false</writeRequiresMasterRead>
+    <trackTrending>false</trackTrending>
+</CustomField>

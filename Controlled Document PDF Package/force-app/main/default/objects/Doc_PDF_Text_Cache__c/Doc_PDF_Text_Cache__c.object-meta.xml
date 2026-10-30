@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <label>Doc PDF Text Cache</label>
+    <pluralLabel>Doc PDF Text Caches</pluralLabel>
+    <description>Text read from a file version by Google Vision, so the same version is not read again for every comparison. Private: each user sees only the text they read.</description>
+    <nameField>
+        <label>Cache Number</label>
+        <type>AutoNumber</type>
+        <displayFormat>DPT-{00000}</displayFormat>
+        <startingNumber>1</startingNumber>
+        <trackHistory>false</trackHistory>
+    </nameField>
+    <deploymentStatus>Deployed</deploymentStatus>
+    <sharingModel>Private</sharingModel>
+    <externalSharingModel>Private</externalSharingModel>
+    <enableActivities>false</enableActivities>
+    <enableBulkApi>true</enableBulkApi>
+    <enableFeeds>false</enableFeeds>
+    <enableHistory>false</enableHistory>
+    <enableReports>false</enableReports>
+    <enableSearch>false</enableSearch>
+    <enableSharing>true</enableSharing>
+    <enableStreamingApi>true</enableStreamingApi>
+    <visibility>Public</visibility>
+</CustomObject>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Match_Rules__c</fullName>
+    <description>Picklist Match only. Optional rules used when the PDF label has no value, one per line: a regular expression matched against the PDF text, then =&gt;, then the value. Example: (?im)^document number:\s*SOP =&gt; SOP</description>
+    <externalId>false</externalId>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+    <inlineHelpText>One rule per line: regular expression =&gt; value. The first rule that matches the PDF text sets the value.</inlineHelpText>
+    <label>Match Rules</label>
+    <length>5000</length>
+    <type>LongTextArea</type>
+    <visibleLines>4</visibleLines>
+</CustomField>

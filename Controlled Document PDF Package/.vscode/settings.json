@@ -1,0 +1,4 @@
+{
+  "search.exclude": { "**/node_modules": true, "**/.sf": true, "**/.sfdx": true },
+  "files.exclude": { "**/.sf": true, "**/.sfdx": true }
+}

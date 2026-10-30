@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <label>Doc PDF Field</label>
+    <pluralLabel>Doc PDF Fields</pluralLabel>
+    <description>One recommended value for one Controlled Document field (or one related record), with where it came from and the user's decision.</description>
+    <nameField>
+        <label>Field Row</label>
+        <type>AutoNumber</type>
+        <displayFormat>DPF-{000000}</displayFormat>
+        <startingNumber>1</startingNumber>
+        <trackHistory>false</trackHistory>
+    </nameField>
+    <deploymentStatus>Deployed</deploymentStatus>
+    <sharingModel>ControlledByParent</sharingModel>
+    <externalSharingModel>ControlledByParent</externalSharingModel>
+    <enableActivities>false</enableActivities>
+    <enableBulkApi>true</enableBulkApi>
+    <enableFeeds>false</enableFeeds>
+    <enableHistory>false</enableHistory>
+    <enableReports>true</enableReports>
+    <enableSearch>false</enableSearch>
+    <enableSharing>true</enableSharing>
+    <enableStreamingApi>true</enableStreamingApi>
+    <visibility>Public</visibility>
+</CustomObject>

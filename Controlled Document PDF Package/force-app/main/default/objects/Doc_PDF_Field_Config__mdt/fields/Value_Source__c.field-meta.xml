@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Value_Source__c</fullName>
+    <description>How the value is found. Labeled Value: text after "PDF Label:". First Sentence of Section / Whole Section: from the section headed PDF Label. Picklist Match: the labeled value matched to the picklist, then Match Rules, then Default Value. Lookup Match: the labeled value matched to a record Name. Fixed Value: always Default Value. User Input: left for the user.</description>
+    <externalId>false</externalId>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+    <inlineHelpText>How the value is found in the PDF.</inlineHelpText>
+    <label>Value Source</label>
+    <required>true</required>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Labeled_Value</fullName>
+                <default>true</default>
+                <label>Labeled Value</label>
+            </value>
+            <value>
+                <fullName>Section_First_Sentence</fullName>
+                <default>false</default>
+                <label>First Sentence of Section</label>
+            </value>
+            <value>
+                <fullName>Section_Text</fullName>
+                <default>false</default>
+                <label>Whole Section</label>
+            </value>
+            <value>
+                <fullName>Picklist_Match</fullName>
+                <default>false</default>
+                <label>Picklist Match</label>
+            </value>
+            <value>
+                <fullName>Lookup_Match</fullName>
+                <default>false</default>
+                <label>Lookup Match</label>
+            </value>
+            <value>
+                <fullName>Fixed_Value</fullName>
+                <default>false</default>
+                <label>Fixed Value</label>
+            </value>
+            <value>
+                <fullName>User_Input</fullName>
+                <default>false</default>
+                <label>User Input</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>AI_Answer__c</fullName>
+    <description>Optional. Which answer from the Field Prompt Template to use first: title, description or documentType. Blank: rules only. When AI is off or its answer does not fit, the Value Source rules run.</description>
+    <externalId>false</externalId>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+    <inlineHelpText>Optional. Which answer from the Field Prompt Template to use first: title, description or documentType. Blank: rules only. When AI is off or its answer does not fit, the Value Source rules run.</inlineHelpText>
+    <label>AI Answer</label>
+    <length>40</length>
+    <required>false</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

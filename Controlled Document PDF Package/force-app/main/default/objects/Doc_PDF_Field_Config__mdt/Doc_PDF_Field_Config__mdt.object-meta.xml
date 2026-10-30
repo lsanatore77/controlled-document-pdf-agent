@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Controlled Document Agent: one record per Controlled Document field the agent recommends from a PDF. Add, change or deactivate records to change the fields in the review; no deploy needed.</description>
+    <label>Doc PDF Field Config</label>
+    <pluralLabel>Doc PDF Field Configs</pluralLabel>
+    <visibility>Public</visibility>
+</CustomObject>

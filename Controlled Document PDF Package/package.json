@@ -1,0 +1,11 @@
+{
+  "name": "controlled-document-pdf-agent",
+  "private": true,
+  "version": "1.2.0",
+  "description": "Controlled Document PDF Agent: create a ComplianceQuest Controlled Document from a PDF, or compare a new PDF with an existing document and summarize the differences.",
+  "scripts": {
+    "validate": "sf project deploy validate --manifest manifest/package.xml --test-level RunSpecifiedTests --tests DocPdfAgentTest DocPdfExtractionTest DocPdfCompareTest",
+    "deploy": "sf project deploy start --manifest manifest/package.xml --test-level RunSpecifiedTests --tests DocPdfAgentTest DocPdfExtractionTest DocPdfCompareTest",
+    "test": "sf apex run test --class-names DocPdfAgentTest DocPdfExtractionTest DocPdfCompareTest --result-format human --code-coverage --wait 10"
+  }
+}

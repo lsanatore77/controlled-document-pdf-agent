@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <label>Doc PDF Proposal</label>
+    <pluralLabel>Doc PDF Proposals</pluralLabel>
+    <description>One run of "create a controlled document from a PDF": the file, the text read from it, the field recommendations (Doc PDF Field rows) and the record created from them. Kept as the audit trail.</description>
+    <nameField>
+        <label>Proposal Number</label>
+        <type>AutoNumber</type>
+        <displayFormat>DPP-{00000}</displayFormat>
+        <startingNumber>1</startingNumber>
+        <trackHistory>false</trackHistory>
+    </nameField>
+    <deploymentStatus>Deployed</deploymentStatus>
+    <sharingModel>Private</sharingModel>
+    <externalSharingModel>Private</externalSharingModel>
+    <enableActivities>false</enableActivities>
+    <enableBulkApi>true</enableBulkApi>
+    <enableFeeds>false</enableFeeds>
+    <enableHistory>true</enableHistory>
+    <enableReports>true</enableReports>
+    <enableSearch>false</enableSearch>
+    <enableSharing>true</enableSharing>
+    <enableStreamingApi>true</enableStreamingApi>
+    <visibility>Public</visibility>
+</CustomObject>

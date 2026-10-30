@@ -1,0 +1,20 @@
+{
+  "packageDirectories": [
+    {
+      "versionName": "ver 0.1",
+      "versionNumber": "0.1.0.NEXT",
+      "path": "force-app",
+      "default": true,
+      "package": "Enablement - Document Agent",
+      "versionDescription": "Controlled Document agent and screen flow: create from PDF or Word, compare.",
+      "dependencies": [{ "package": "04tRn000000qxC5IAI" }]
+    }
+  ],
+  "name": "controlled-document-from-pdf-agent",
+  "namespace": "enablement",
+  "sfdcLoginUrl": "https://test.salesforce.com",
+  "sourceApiVersion": "66.0",
+  "packageAliases": {
+    "Enablement - Document Agent": "0Hofn0000001ZTZCA2"
+  }
+}

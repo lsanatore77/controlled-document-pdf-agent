@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningTypeBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <masterLabel>Doc PDF Review Type</masterLabel>
+    <description>Collects the accept / edit / clear decision on each recommended field, with the docPdfReview LWC</description>
+</LightningTypeBundle>

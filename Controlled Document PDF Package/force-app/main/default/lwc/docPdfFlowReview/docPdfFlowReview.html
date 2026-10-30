@@ -1,0 +1,8 @@
+<template>
+    <div class="wrap">
+        <template if:true={message}>
+            <div class="note" role="status">{message}</div>
+        </template>
+        <c-doc-pdf-review value={reviewValue} onvaluechange={handleChange}></c-doc-pdf-review>
+    </div>
+</template>

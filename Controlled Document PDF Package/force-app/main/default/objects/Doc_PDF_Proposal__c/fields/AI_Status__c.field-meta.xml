@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>AI_Status__c</fullName>
+    <description>Whether AI suggestions were used for this PDF, and why not when they were not.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Whether AI suggestions were used for this PDF, and why not when they were not.</inlineHelpText>
+    <label>AI Status</label>
+    <length>255</length>
+    <required>false</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>
