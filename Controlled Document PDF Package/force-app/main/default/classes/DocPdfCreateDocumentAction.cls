@@ -13,9 +13,10 @@
  *   6. marks the proposal Created.
  * Fixed rows (Doc PDF Field Config: Fixed Value or not Editable) are written as set up.
  * Numbering: the Template follows the final Document Category (Category Templates on Doc PDF
- * Agent Setting) unless the user picked a template themselves; ComplianceQuest numbers the document
- * from it. With no released template, or when ComplianceQuest leaves the number blank, the Document
- * Number row is used (the category prefix plus the next free number, checked again here).
+ * Agent Setting) unless the user picked a template themselves. ComplianceQuest numbers the document
+ * when its auto-numbering is set up. With no released template, or when ComplianceQuest leaves the
+ * number blank or as its AUTO placeholder, the Document Number row is used (the category prefix plus
+ * the next free number, checked again here).
  * A document is never saved without a number.
  */
 global with sharing class DocPdfCreateDocumentAction {
@@ -152,9 +153,12 @@ global with sharing class DocPdfCreateDocumentAction {
             Map<String, Object> setValues = new Map<String, Object>(doc.getPopulatedFieldsAsMap());
             String usedNumber;
             String firstError;
+            Boolean leftAuto = false;
             Boolean saved = false;
             if (plan.templateId != null) {
-                // ComplianceQuest numbers it from the template.
+                // ComplianceQuest numbers it when its auto-numbering is set up (an Auto Number record named
+                // after the record type). Without one it leaves the number as AUTO: then the next free
+                // category number is used instead.
                 Savepoint sp = Database.setSavepoint();
                 try {
                     insert as user doc;
@@ -162,15 +166,19 @@ global with sharing class DocPdfCreateDocumentAction {
                         SELECT compliancequest__Document_Number__c FROM compliancequest__SQX_Controlled_Document__c
                         WHERE Id = :doc.Id LIMIT 1
                     ].compliancequest__Document_Number__c;
-                    if (String.isBlank(assigned)) {
+                    if (notNumbered(assigned)) {
                         Database.rollback(sp);
-                        firstError = 'ComplianceQuest did not number it from template ' + plan.templateName + '.';
+                        leftAuto = String.isNotBlank(assigned);
+                        firstError = 'ComplianceQuest did not number it.';
                     } else {
                         saved = true;
                     }
                 } catch (DmlException e) {
                     Database.rollback(sp);
                     firstError = e.getDmlMessage(0);
+                    // A second document left as AUTO clashes with the first one.
+                    leftAuto = firstError != null && firstError.containsIgnoreCase('duplicate')
+                        && DocPdfNumbering.isTaken(AUTO_NUMBER);
                 }
             }
             if (!saved) {
@@ -198,7 +206,7 @@ global with sharing class DocPdfCreateDocumentAction {
             for (Doc_PDF_Field__c f : rows) {
                 String api = f.Field_API_Name__c == null ? '' : f.Field_API_Name__c.toLowerCase();
                 if (api == DocPdfRecommendationBuilder.NUMBER_FIELD) {
-                    f.Outcome__c = usedNumber == null ? 'Numbered by the template' : ('Set: ' + usedNumber).left(255);
+                    f.Outcome__c = usedNumber == null ? 'Numbered by ComplianceQuest' : ('Set: ' + usedNumber).left(255);
                 } else if (api == DocPdfRecommendationBuilder.TEMPLATE_FIELD) {
                     f.Outcome__c = plan.templateId == null ? 'Left blank' : ('Set: ' + plan.templateName).left(255);
                 }
@@ -259,7 +267,10 @@ global with sharing class DocPdfCreateDocumentAction {
                 s += ' Added ' + reqOk + (reqOk == 1 ? ' training requirement.' : ' training requirements.');
             }
             if (usedNumber == null) {
-                s += ' ComplianceQuest numbered it from template ' + plan.templateName + '.';
+                s += ' ComplianceQuest numbered it (template ' + plan.templateName + ').';
+            } else if (leftAuto) {
+                s += ' Its number is ' + usedNumber + ', the next free ' + usedNumber.substringBeforeLast('-')
+                    + ' number: ComplianceQuest left it as AUTO because its auto-numbering is not set up for Controlled Documents.';
             } else {
                 s += ' Its number is ' + usedNumber + (firstError != null
                     ? ', used because ComplianceQuest did not number it (' + firstError + ').'
@@ -333,6 +344,16 @@ global with sharing class DocPdfCreateDocumentAction {
         public String category;
         public String prefix;
         public String wantedNumber;
+    }
+
+    /** ComplianceQuest's placeholder number when its auto-numbering has no Auto Number record to use. */
+    @TestVisible
+    private static final String AUTO_NUMBER = 'AUTO';
+
+    /** True when ComplianceQuest left the document without a real number (blank, or its AUTO placeholder). */
+    @TestVisible
+    private static Boolean notNumbered(String assigned) {
+        return String.isBlank(assigned) || assigned.trim().equalsIgnoreCase(AUTO_NUMBER);
     }
 
     private static Boolean isNumberingField(Doc_PDF_Field__c f) {

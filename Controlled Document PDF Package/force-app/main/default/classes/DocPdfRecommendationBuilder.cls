@@ -118,7 +118,7 @@ public with sharing class DocPdfRecommendationBuilder {
 
         if (extractionSucceeded != true || String.isBlank(text)) {
             proposal.Status__c = 'Failed';
-            proposal.Message__c = String.isBlank(extractionMessage) ? 'No text could be read from the PDF.' : extractionMessage;
+            proposal.Message__c = String.isBlank(extractionMessage) ? 'No text could be read from the file.' : extractionMessage;
             update as user proposal;
             s.message = proposal.Message__c;
             return s;
@@ -166,7 +166,7 @@ public with sharing class DocPdfRecommendationBuilder {
         s.success = true;
         String readNote = pagesRead == 1 && totalPages == 1
             ? 'I read ' + nvl(fileName, 'the file') + '. '
-            : 'I read ' + pagesRead + (pagesRead == 1 ? ' page' : ' pages') + ' of ' + nvl(fileName, 'the PDF') + '. ';
+            : 'I read ' + pagesRead + (pagesRead == 1 ? ' page' : ' pages') + ' of ' + nvl(fileName, 'the file') + '. ';
         s.message = (readNote
             + countText(s.readyCount, 'is ready', 'are ready') + ', '
             + countText(s.reviewCount, 'needs your review', 'need your review') + ' and '
@@ -455,8 +455,7 @@ public with sharing class DocPdfRecommendationBuilder {
         f.value = t.id;
         f.display = t.name;
         f.exact = true;
-        f.evidence = ('Template for Category ' + categoryValue + '. ComplianceQuest numbers the document from it. '
-            + 'If you change the Category, the template follows it.').left(255);
+        f.evidence = ('Template for Category ' + categoryValue + '. If you change the Category, the template follows it.').left(255);
         return f;
     }
 
@@ -470,8 +469,8 @@ public with sharing class DocPdfRecommendationBuilder {
         String suggested = DocPdfNumbering.nextNumber(prefix);
         String evidence;
         if (templateChosen != null) {
-            evidence = 'ComplianceQuest numbers the document from template ' + templateChosen.label
-                + '. This number is used only if it does not.';
+            evidence = 'Next free ' + prefix + ' number (template ' + templateChosen.label + '). ComplianceQuest numbers '
+                + 'the document instead when its auto-numbering is set up.';
         } else {
             evidence = 'No released template for ' + (categoryValue == null ? 'this document' : 'Category ' + categoryValue)
                 + ': next free ' + prefix + ' number. Edit it if you need to; it is checked again when you submit.';
@@ -494,7 +493,7 @@ public with sharing class DocPdfRecommendationBuilder {
             return f;
         }
         if (src == 'User_Input') {
-            f.evidence = 'Not read from the PDF. Pick or enter a value.';
+            f.evidence = 'Not read from the file. Pick or enter a value.';
             return f;
         }
         if (src == 'Section_First_Sentence' || src == 'Section_Text') {
@@ -534,12 +533,12 @@ public with sharing class DocPdfRecommendationBuilder {
                     f.value = o.value;
                     f.display = o.label;
                     f.exact = true;
-                    f.evidence = 'The PDF says "' + raw.left(80) + '".';
+                    f.evidence = 'The file says "' + raw.left(80) + '".';
                     return f;
                 }
-                f.evidence = 'The PDF says "' + raw.left(80) + '", which is not a value of this field.';
+                f.evidence = 'The file says "' + raw.left(80) + '", which is not a value of this field.';
             } else {
-                f.evidence = labelText == null ? 'No PDF label is set up.' : 'No "' + labelText + ':" label in the PDF.';
+                f.evidence = labelText == null ? 'No file label is set up.' : 'No "' + labelText + ':" label in the file.';
             }
             // Document Category: the template whose sections the document has, before the keyword rules.
             if (d.getName().toLowerCase() == CATEGORY_FIELD) {
@@ -568,19 +567,19 @@ public with sharing class DocPdfRecommendationBuilder {
                     f.value = exact.value;
                     f.display = exact.label;
                     f.exact = true;
-                    f.evidence = 'The PDF says "' + raw.left(80) + '".';
+                    f.evidence = 'The file says "' + raw.left(80) + '".';
                     return f;
                 }
                 Option close = matchOption(opts, raw, false);
                 if (close != null) {
                     f.value = close.value;
                     f.display = close.label;
-                    f.evidence = 'The PDF says "' + raw.left(80) + '". Closest match: ' + close.label + '.';
+                    f.evidence = 'The file says "' + raw.left(80) + '". Closest match: ' + close.label + '.';
                     return f;
                 }
-                f.evidence = 'The PDF says "' + raw.left(80) + '", but no record has that name.';
+                f.evidence = 'The file says "' + raw.left(80) + '", but no record has that name.';
             } else {
-                f.evidence = labelText == null ? 'No PDF label is set up.' : 'No "' + labelText + ':" label in the PDF.';
+                f.evidence = labelText == null ? 'No file label is set up.' : 'No "' + labelText + ':" label in the file.';
             }
             String ruledRecord = applyRules(c.matchRules);
             if (ruledRecord != null) {
@@ -607,12 +606,12 @@ public with sharing class DocPdfRecommendationBuilder {
                 f.value = v;
                 f.display = fieldType == 'date' ? displayDate(v) : null;
                 f.exact = true;
-                f.evidence = 'From the "' + labelText + ':" label in the PDF.';
+                f.evidence = 'From the "' + labelText + ':" label in the file.';
                 return f;
             }
-            f.evidence = 'The PDF says "' + raw.left(80) + '", which does not fit this field.';
+            f.evidence = 'The file says "' + raw.left(80) + '", which does not fit this field.';
         } else {
-            f.evidence = labelText == null ? 'No PDF label is set up.' : 'No "' + labelText + ':" label in the PDF.';
+            f.evidence = labelText == null ? 'No file label is set up.' : 'No "' + labelText + ':" label in the file.';
         }
         return fallbackToDefault(f, c, d, fieldType, opts);
     }
@@ -629,7 +628,7 @@ public with sharing class DocPdfRecommendationBuilder {
                 f.display = null;
                 f.source = 'From PDF text';
                 f.exact = false;
-                f.evidence = ((why == null ? '' : why + ' ') + 'Used the first line of the PDF.').left(255);
+                f.evidence = ((why == null ? '' : why + ' ') + 'Used the first line of the file.').left(255);
             }
             return f;
         }

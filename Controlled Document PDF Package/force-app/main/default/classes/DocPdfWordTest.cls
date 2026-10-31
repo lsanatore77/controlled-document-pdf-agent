@@ -288,4 +288,15 @@ private class DocPdfWordTest {
         Assert.areEqual('POL-000123', plan.wantedNumber);
         Assert.areEqual('Picked', plan.templateName);
     }
+
+    @IsTest
+    static void autoPlaceholderIsNotANumber() {
+        // ComplianceQuest leaves AUTO when its auto-numbering has no Auto Number record: the category number is used.
+        Assert.isTrue(DocPdfCreateDocumentAction.notNumbered(null));
+        Assert.isTrue(DocPdfCreateDocumentAction.notNumbered(' '));
+        Assert.isTrue(DocPdfCreateDocumentAction.notNumbered('AUTO'));
+        Assert.isTrue(DocPdfCreateDocumentAction.notNumbered('auto '));
+        Assert.isFalse(DocPdfCreateDocumentAction.notNumbered('POL-000001'));
+        Assert.isFalse(DocPdfCreateDocumentAction.notNumbered('AUTO-000001'));
+    }
 }
