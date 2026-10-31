@@ -200,6 +200,36 @@ private class DocPdfRevisionCheckTest {
         }
     }
 
+    @IsTest
+    static void librariesAreSetByName() {
+        Schema.RecordTypeInfo rt = compliancequest__SQX_Controlled_Document__c.SObjectType.getDescribe()
+            .getRecordTypeInfosByDeveloperName().get('Controlled_Document');
+        // Another record type is left alone.
+        Assert.isTrue(DocPdfLibraries.apply(new compliancequest__SQX_Controlled_Document__c()).isEmpty());
+        if (rt == null) {
+            return;
+        }
+        DocPdfLibraries.draftName = 'No Such Library A';
+        DocPdfLibraries.releaseName = 'No Such Library B';
+        compliancequest__SQX_Controlled_Document__c d = new compliancequest__SQX_Controlled_Document__c(RecordTypeId = rt.getRecordTypeId());
+        Assert.areEqual(2, DocPdfLibraries.apply(d).size());
+        Assert.isNull(d.compliancequest__Draft_Vault__c);
+
+        List<ContentWorkspace> ws = [SELECT Id, Name FROM ContentWorkspace LIMIT 1];
+        if (!ws.isEmpty()) {
+            DocPdfLibraries.draftName = ws[0].Name;
+            DocPdfLibraries.releaseName = ws[0].Name.toUpperCase();
+            d = new compliancequest__SQX_Controlled_Document__c(RecordTypeId = rt.getRecordTypeId());
+            Assert.isTrue(DocPdfLibraries.apply(d).isEmpty());
+            Assert.areEqual(String.valueOf(ws[0].Id), d.compliancequest__Draft_Vault__c);
+            Assert.areEqual(String.valueOf(ws[0].Id), d.compliancequest__Release_Vault__c);
+            // A library already chosen is kept.
+            d.compliancequest__Draft_Vault__c = 'kept';
+            DocPdfLibraries.apply(d);
+            Assert.areEqual('kept', d.compliancequest__Draft_Vault__c);
+        }
+    }
+
     // ------------------------------------------------------------------ review
 
     @IsTest

@@ -135,6 +135,9 @@ global with sharing class DocPdfCreateDocumentAction {
                 }
             }
 
+            // ---- libraries (by name, as CQ's create screen sets them)
+            List<String> missingLibraries = DocPdfLibraries.apply(doc);
+
             // ---- template and number
             NumberPlan plan = planNumber(rows);
             Schema.SObjectField templateField = fieldMap.get(DocPdfRecommendationBuilder.TEMPLATE_FIELD);
@@ -203,6 +206,9 @@ global with sharing class DocPdfCreateDocumentAction {
 
             // ---- related records (best effort: the document stays even if one fails)
             List<String> notes = new List<String>();
+            if (!missingLibraries.isEmpty()) {
+                notes.add('Library not found, so it was left blank: ' + String.join(missingLibraries, ', ') + '.');
+            }
             List<compliancequest__SQX_Related_Document__c> related = new List<compliancequest__SQX_Related_Document__c>();
             List<Doc_PDF_Field__c> relatedRows = new List<Doc_PDF_Field__c>();
             List<compliancequest__SQX_Requirement__c> reqs = new List<compliancequest__SQX_Requirement__c>();
