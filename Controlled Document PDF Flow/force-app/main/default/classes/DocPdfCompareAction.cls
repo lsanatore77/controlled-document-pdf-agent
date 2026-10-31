@@ -132,6 +132,7 @@ global with sharing class DocPdfCompareAction {
             DocPdfMatchService.Settings st = DocPdfMatchService.loadSettings();
             DocPdfMatchService.Result m = DocPdfMatchService.match(doc.Name, doc.compliancequest__Document_Number__c,
                 doc.compliancequest__Title__c, doc.compliancequest__Revision__c, oldText, newRead.text, st);
+            adjustVerdict(m, doc.Name, st, forReview);
             Boolean doCompare = m.compareByDefault
                 || (m.verdict == DocPdfMatchService.POSSIBLY_RELATED && req.compareAnyway == true);
             DocPdfCompareService.Comparison c = doCompare ? DocPdfCompareService.compare(oldText, newRead.text, m, st) : null;
@@ -205,6 +206,52 @@ global with sharing class DocPdfCompareAction {
             r.message = 'The comparison could not be completed: ' + e.getMessage();
         }
         return r;
+    }
+
+    /** At or above this % of the new file's text found in the existing document, it is a version. */
+    public static Decimal versionShared = 90;
+
+    /**
+     * Shared text overrides missing or different labels: 90% or more of the new file's text in the
+     * existing document makes it a version; from the review (where the revision check already matched
+     * the two), 60% or more makes it a likely version. Reasons speak of "the file" (PDF or Word).
+     */
+    @TestVisible
+    private static void adjustVerdict(DocPdfMatchService.Result m, String docName, DocPdfMatchService.Settings st, Boolean forReview) {
+        for (DocPdfMatchService.Reason rs : m.reasons) {
+            if (rs.text != null) {
+                rs.text = rs.text.replace('in the PDF', 'in the file');
+                if (rs.text == 'of the text is shared') {
+                    rs.text = 'of the new file\'s text is also in ' + docName;
+                }
+            }
+        }
+        if (m.text != null) {
+            m.text = m.text.replace('The PDF', 'The file').replace('the PDF', 'the file');
+        }
+        if (m.verdict == DocPdfMatchService.VERSION || m.verdict == DocPdfMatchService.REWRITTEN || m.shared == null) {
+            return;
+        }
+        String why = m.numberState == 'different' && String.isNotBlank(m.pdfNumber)
+            ? 'The file shows document number ' + m.pdfNumber + ', but '
+            : String.isBlank(m.pdfNumber) ? 'The file has no document number, but ' : '';
+        String pct = m.shared.setScale(0) + '%';
+        if (m.shared >= versionShared) {
+            m.verdict = DocPdfMatchService.VERSION;
+            m.title = 'Version of ' + docName;
+            m.text = why + pct + ' of its text is in the current version.';
+            m.tone = 'ok';
+            m.compareByDefault = true;
+        } else if (forReview == true && m.shared >= st.likelyMin && m.verdict != DocPdfMatchService.LIKELY_VERSION) {
+            m.verdict = DocPdfMatchService.LIKELY_VERSION;
+            m.title = 'Likely a version of ' + docName;
+            m.text = why + pct + ' of its text is in the current version.';
+            m.tone = 'warn';
+            m.compareByDefault = true;
+        }
+        if (String.isNotBlank(m.text)) {
+            m.text = m.text.left(1).toUpperCase() + m.text.substring(1);
+        }
     }
 
     // ------------------------------------------------------------------ lookups

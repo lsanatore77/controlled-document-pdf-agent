@@ -194,23 +194,50 @@ public with sharing class DocPdfCompareService {
         return null;
     }
 
-    /** Sentences of a section, joined across line breaks. */
+    /**
+     * Sentences of a section, joined across line breaks. A short line with no closing punctuation that
+     * starts a new line of thought (a title or heading, e.g. "SUMMARY") stays a line of its own, so it is
+     * not glued to the sentence after it.
+     */
     @TestVisible
     private static List<String> sentences(List<String> lines) {
         List<String> out = new List<String>();
-        String joined = String.join(lines, ' ').normalizeSpace();
+        List<String> buf = new List<String>();
+        for (Integer k = 0; k < lines.size(); k++) {
+            String l = lines[k] == null ? '' : lines[k].normalizeSpace();
+            if (l.length() == 0) {
+                continue;
+            }
+            Boolean atBoundary = buf.isEmpty() || Pattern.matches('.*[.;:!?]$', buf[buf.size() - 1]);
+            Boolean nextStartsNew = k == lines.size() - 1 || lines[k + 1] == null
+                || Pattern.matches('^[A-Z0-9\\[(].*', lines[k + 1].trim());
+            if (atBoundary && nextStartsNew && l.length() <= 60 && !Pattern.matches('.*[.;:!?,]$', l)) {
+                splitInto(String.join(buf, ' '), out);
+                buf.clear();
+                if (l.length() > 2) {
+                    out.add(l);
+                }
+                continue;
+            }
+            buf.add(l);
+        }
+        splitInto(String.join(buf, ' '), out);
+        while (out.size() > MAX_SENTENCES) {
+            out.remove(out.size() - 1);
+        }
+        return out;
+    }
+
+    private static void splitInto(String joined, List<String> out) {
+        joined = joined == null ? '' : joined.normalizeSpace();
         if (String.isBlank(joined)) {
-            return out;
+            return;
         }
         for (String s : joined.split('(?<=[.;!?])\\s+')) {
             if (String.isNotBlank(s) && s.trim().length() > 2) {
                 out.add(s.trim());
             }
-            if (out.size() >= MAX_SENTENCES) {
-                break;
-            }
         }
-        return out;
     }
 
     /** Sentence-level difference (longest common subsequence on normalized sentences). */

@@ -145,6 +145,61 @@ private class DocPdfRevisionCheckTest {
         }
     }
 
+    @IsTest
+    static void mostlySharedTextIsAVersionEvenWithoutLabels() {
+        // A Word file with no "Document Number:" or "Title:" lines: the labels alone say "possibly related".
+        DocPdfMatchService.Settings st = new DocPdfMatchService.Settings();
+        DocPdfMatchService.Result m = DocPdfMatchService.match('PROC-000003[001]', 'PROC-000003', 'Emergency Response', null,
+            BODY, BODY, st);
+        Assert.areEqual(DocPdfMatchService.POSSIBLY_RELATED, m.verdict);
+        DocPdfCompareAction.adjustVerdict(m, 'PROC-000003[001]', st, false);
+        Assert.areEqual(DocPdfMatchService.VERSION, m.verdict);
+        Assert.areEqual('Version of PROC-000003[001]', m.title);
+        Assert.isTrue(m.compareByDefault);
+        for (DocPdfMatchService.Reason rs : m.reasons) {
+            Assert.isFalse(rs.text.contains('PDF'), rs.text);
+        }
+
+        DocPdfMatchService.Result likely = new DocPdfMatchService.Result();
+        likely.verdict = DocPdfMatchService.POSSIBLY_RELATED;
+        likely.shared = 70;
+        likely.numberState = 'missing';
+        DocPdfCompareAction.adjustVerdict(likely, 'PROC-000003[001]', st, false);
+        Assert.areEqual(DocPdfMatchService.POSSIBLY_RELATED, likely.verdict, 'Outside the review, 70% stays possibly related');
+        DocPdfCompareAction.adjustVerdict(likely, 'PROC-000003[001]', st, true);
+        Assert.areEqual(DocPdfMatchService.LIKELY_VERSION, likely.verdict);
+
+        DocPdfMatchService.Result renumbered = new DocPdfMatchService.Result();
+        renumbered.verdict = DocPdfMatchService.DIFFERENT;
+        renumbered.shared = 95;
+        renumbered.numberState = 'different';
+        renumbered.pdfNumber = 'PROC-000009';
+        DocPdfCompareAction.adjustVerdict(renumbered, 'PROC-000003[001]', st, true);
+        Assert.areEqual(DocPdfMatchService.VERSION, renumbered.verdict);
+        Assert.isTrue(renumbered.text.contains('PROC-000009'), renumbered.text);
+    }
+
+    @IsTest
+    static void titlesAndHeadingsStayOnTheirOwnLine() {
+        List<String> s = DocPdfCompareService.sentences(new List<String>{
+            'EU Belgium Emergency Response Procedures Procedure', 'SUMMARY',
+            'This procedure defines how the site prepares', 'for emergencies.', 'It protects employees.'
+        });
+        Assert.areEqual(4, s.size(), '' + s);
+        Assert.areEqual('SUMMARY', s[1]);
+        Assert.areEqual('This procedure defines how the site prepares for emergencies.', s[2]);
+
+        // Deleting the summary text leaves the title and heading unchanged: only the sentences are removed.
+        String before = 'EU Belgium Procedure\nSUMMARY\nThis procedure defines how the site prepares for emergencies.\nIt protects employees.\n';
+        String after = 'EU Belgium Procedure\nSUMMARY\n';
+        DocPdfMatchService.Settings st = new DocPdfMatchService.Settings();
+        DocPdfMatchService.Result m = DocPdfMatchService.match('PROC-000003[001]', 'PROC-000003', 'EU Belgium Procedure', null, before, after, st);
+        DocPdfCompareService.Comparison c = DocPdfCompareService.compare(before, after, m, st);
+        for (DocPdfCompareService.SectionChange sc : c.sections) {
+            Assert.isTrue(sc.added.isEmpty(), '' + sc.added);
+        }
+    }
+
     // ------------------------------------------------------------------ review
 
     @IsTest
