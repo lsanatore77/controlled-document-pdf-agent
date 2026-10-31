@@ -41,6 +41,44 @@
                 </div>
             </div>
 
+            <!-- Is this a new version of an existing document? -->
+            <template if:true={showMatch}>
+                <div class="match" role="status">
+                    <div class="match-top">
+                        <div class="match-icon">
+                            <lightning-icon icon-name="utility:copy" size="x-small" alternative-text=""></lightning-icon>
+                        </div>
+                        <div class="match-text">
+                            <div class="match-title">This looks like a new version of {match.name}</div>
+                            <div class="match-sub">{matchDetail}</div>
+                            <div class="match-reason">{match.reason} Revise the existing document instead of creating a new one?</div>
+                        </div>
+                    </div>
+                    <div class="match-acts">
+                        <button type="button" class="btn-primary" onclick={handleCompare} disabled={comparing}>{compareLabel}</button>
+                        <button type="button" class="btn-outline" onclick={handleOpenMatch}>Open {match.name} to revise</button>
+                        <button type="button" class="btn-link" onclick={handleCreateAnyway}>Create a new document anyway</button>
+                    </div>
+                    <template if:true={comparing}>
+                        <div class="match-note muted">Comparing with {match.name}. This can take a little while.</div>
+                    </template>
+                    <template if:true={compareError}>
+                        <div class="match-note error">{compareError}</div>
+                    </template>
+                    <template if:true={showComparison}>
+                        <div class="match-compare">
+                            <c-doc-pdf-comparison value={comparisonValue}></c-doc-pdf-comparison>
+                        </div>
+                    </template>
+                </div>
+            </template>
+            <template if:true={matchDismissed}>
+                <div class="match-dismissed">
+                    <span>Creating a new document, not a version of {match.name}.</span>
+                    <button type="button" class="btn-link" onclick={handleShowMatch}>Undo</button>
+                </div>
+            </template>
+
             <!-- What will be created -->
             <div class="summary">
                 <div class="sum-item">

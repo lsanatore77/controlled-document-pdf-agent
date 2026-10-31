@@ -5,6 +5,8 @@
         <members>DocPdfAiSuggestions</members>
         <members>DocPdfWordTest</members>
         <members>DocPdfReviewGuardTest</members>
+        <members>DocPdfRevisionCheck</members>
+        <members>DocPdfRevisionCheckTest</members>
         <members>DocPdfNumbering</members>
         <members>DocPdfDocxReader</members>
         <members>DocPdfAiTest</members>

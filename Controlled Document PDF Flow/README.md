@@ -48,7 +48,7 @@ sf project deploy start --manifest manifest/package.xml --target-org testorg
 Production (validate, then quick deploy with the job Id it prints):
 
 ```
-sf project deploy validate --manifest manifest/package.xml --target-org testorg --test-level RunSpecifiedTests --tests DocPdfAgentTest DocPdfExtractionTest DocPdfCompareTest DocPdfFlowTest DocPdfAiTest
+sf project deploy validate --manifest manifest/package.xml --target-org testorg --test-level RunSpecifiedTests --tests DocPdfAgentTest DocPdfExtractionTest DocPdfCompareTest DocPdfFlowTest DocPdfAiTest DocPdfRevisionCheckTest
 sf project deploy quick --job-id 0Af... --target-org testorg
 ```
 

@@ -60,6 +60,12 @@ public with sharing class DocPdfBuildRecommendationsAction {
                 r.reviewCount = s.reviewCount;
                 r.inputCount = s.inputCount;
                 r.relatedCount = s.relatedCount;
+                if (s.success == true) {
+                    String note = checkRevision(Id.valueOf(req.proposalId.trim()), req.extractedText);
+                    if (note != null) {
+                        r.summary = (r.summary.removeEnd(' Showing the review now.') + note + ' Showing the review now.').left(1000);
+                    }
+                }
             } catch (Exception e) {
                 r.success = false;
                 r.summary = 'I could not prepare the field recommendations: ' + e.getMessage();
@@ -71,5 +77,49 @@ public with sharing class DocPdfBuildRecommendationsAction {
             out.add(r);
         }
         return out;
+    }
+
+    /**
+     * Is this file a new version of a document that already exists (DocPdfRevisionCheck, no callouts)?
+     * Saves the match on the proposal for the review's banner and returns a sentence for the summary.
+     */
+    @TestVisible
+    private static String checkRevision(Id proposalId, String text) {
+        try {
+            Doc_PDF_Proposal__c p = [
+                SELECT Id, File_Name__c, Message__c FROM Doc_PDF_Proposal__c WHERE Id = :proposalId WITH USER_MODE LIMIT 1
+            ];
+            String title = null;
+            for (Doc_PDF_Field__c f : [
+                SELECT Proposed_Value__c FROM Doc_PDF_Field__c
+                WHERE Proposal__c = :proposalId AND Field_API_Name__c = 'compliancequest__Title__c'
+                WITH USER_MODE LIMIT 1
+            ]) {
+                title = f.Proposed_Value__c;
+            }
+            DocPdfRevisionCheck.Found match = DocPdfRevisionCheck.check(text, p.File_Name__c, title, proposalId);
+            String name = null;
+            if (match != null) {
+                for (compliancequest__SQX_Controlled_Document__c d : [
+                    SELECT Name FROM compliancequest__SQX_Controlled_Document__c WHERE Id = :match.documentId WITH USER_MODE LIMIT 1
+                ]) {
+                    name = d.Name;
+                }
+            }
+            String note = name == null ? null
+                : ' It may be a new version of ' + name + ' (' + match.kind.toLowerCase()
+                  + '): the review lets you compare, open it to revise, or create a new document anyway.';
+            update as user new Doc_PDF_Proposal__c(
+                Id = proposalId,
+                Controlled_Document__c = name == null ? null : match.documentId,
+                Match_Verdict__c = name == null ? null : match.kind,
+                Match_Score__c = name == null ? null : match.shared,
+                Old_Content_Version_Id__c = null,
+                Comparison_JSON__c = null,
+                Message__c = note == null || p.Message__c == null ? p.Message__c : (p.Message__c + note).left(1000));
+            return note;
+        } catch (Exception e) {
+            return null; // A hint only: never stops the review.
+        }
     }
 }

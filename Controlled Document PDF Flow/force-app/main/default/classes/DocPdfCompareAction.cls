@@ -53,8 +53,25 @@ global with sharing class DocPdfCompareAction {
         return out;
     }
 
+    /**
+     * From the review (docPdfReview): compares the file under review with the existing document the
+     * revision check found. Keeps the proposal ready for review (Status and Mode unchanged) and reuses
+     * the text already read from the file, so only the existing document may need reading.
+     */
+    public static Result compareForReview(String proposalId, String controlledDocumentId) {
+        Request req = new Request();
+        req.proposalId = proposalId;
+        req.controlledDocumentId = controlledDocumentId;
+        req.compareAnyway = true;
+        return runOne(req, true);
+    }
+
     @TestVisible
     private static Result runOne(Request req) {
+        return runOne(req, false);
+    }
+
+    private static Result runOne(Request req, Boolean forReview) {
         Result r = new Result();
         r.success = false;
         r.compared = false;
@@ -102,7 +119,10 @@ global with sharing class DocPdfCompareAction {
                 }
                 oldText = oldRead.text;
             }
-            GoogleVisionPdfService.Extraction newRead = GoogleVisionPdfService.extract(Id.valueOf(p.contentVersionId));
+            GoogleVisionPdfService.Extraction newRead = forReview ? readSoFar(p.proposalId) : null;
+            if (newRead == null) {
+                newRead = GoogleVisionPdfService.extract(Id.valueOf(p.contentVersionId));
+            }
             if (newRead.success != true || String.isBlank(newRead.text)) {
                 r.message = 'I could not read ' + p.fileName + ': ' + newRead.message;
                 return r;
@@ -134,22 +154,31 @@ global with sharing class DocPdfCompareAction {
                 view.put('sectionsTrimmed', true);
                 viewJson = JSON.serialize(view);
             }
-            Doc_PDF_Proposal__c upd = new Doc_PDF_Proposal__c(
-                Id = p.proposalId,
-                Mode__c = 'Compare',
-                Controlled_Document__c = doc.Id,
-                Old_Content_Version_Id__c = oldCv.Id,
-                Match_Verdict__c = m.verdict,
-                Match_Score__c = m.shared,
-                Comparison_JSON__c = viewJson.length() > 131072 ? null : viewJson,
-                Summary__c = c == null ? m.text : c.summary,
-                Pages_Read__c = newRead.pagesRead,
-                Total_Pages__c = newRead.totalPages,
-                Extracted_Text__c = newRead.text.left(131072));
-            if (c != null) {
-                upd.Status__c = 'Compared'; // otherwise it stays Draft, so "compare anyway" or "create" can reuse the PDF
+            if (forReview) {
+                // The review stays as it is: only the comparison is added.
+                update as user new Doc_PDF_Proposal__c(
+                    Id = p.proposalId,
+                    Controlled_Document__c = doc.Id,
+                    Old_Content_Version_Id__c = oldCv.Id,
+                    Comparison_JSON__c = viewJson.length() > 131072 ? null : viewJson);
+            } else {
+                Doc_PDF_Proposal__c upd = new Doc_PDF_Proposal__c(
+                    Id = p.proposalId,
+                    Mode__c = 'Compare',
+                    Controlled_Document__c = doc.Id,
+                    Old_Content_Version_Id__c = oldCv.Id,
+                    Match_Verdict__c = m.verdict,
+                    Match_Score__c = m.shared,
+                    Comparison_JSON__c = viewJson.length() > 131072 ? null : viewJson,
+                    Summary__c = c == null ? m.text : c.summary,
+                    Pages_Read__c = newRead.pagesRead,
+                    Total_Pages__c = newRead.totalPages,
+                    Extracted_Text__c = newRead.text.left(131072));
+                if (c != null) {
+                    upd.Status__c = 'Compared'; // otherwise it stays Draft, so "compare anyway" or "create" can reuse the PDF
+                }
+                update as user upd;
             }
-            update as user upd;
 
             // ---- result
             r.success = true;
@@ -179,6 +208,23 @@ global with sharing class DocPdfCompareAction {
     }
 
     // ------------------------------------------------------------------ lookups
+
+    /** The text already read from the proposal's file, or null when there is none. */
+    private static GoogleVisionPdfService.Extraction readSoFar(String proposalId) {
+        List<Doc_PDF_Proposal__c> ps = [
+            SELECT Extracted_Text__c, Pages_Read__c, Total_Pages__c FROM Doc_PDF_Proposal__c
+            WHERE Id = :proposalId WITH USER_MODE LIMIT 1
+        ];
+        if (ps.isEmpty() || String.isBlank(ps[0].Extracted_Text__c)) {
+            return null;
+        }
+        GoogleVisionPdfService.Extraction e = new GoogleVisionPdfService.Extraction();
+        e.success = true;
+        e.text = ps[0].Extracted_Text__c;
+        e.pagesRead = ps[0].Pages_Read__c == null ? null : ps[0].Pages_Read__c.intValue();
+        e.totalPages = ps[0].Total_Pages__c == null ? null : ps[0].Total_Pages__c.intValue();
+        return e;
+    }
 
     @TestVisible
     private static compliancequest__SQX_Controlled_Document__c findDocument(String recordId, String numberOrName) {

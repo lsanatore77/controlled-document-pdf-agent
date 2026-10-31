@@ -31,7 +31,7 @@ sf project deploy start --manifest manifest/package.xml --test-level NoTestRun
 Sandboxes can skip tests. For production, run the test classes:
 
 ```
-sf project deploy start --manifest manifest/package.xml --test-level RunSpecifiedTests --tests DocPdfAgentTest DocPdfExtractionTest DocPdfCompareTest DocPdfWordTest DocPdfAiTest DocPdfReviewGuardTest
+sf project deploy start --manifest manifest/package.xml --test-level RunSpecifiedTests --tests DocPdfAgentTest DocPdfExtractionTest DocPdfCompareTest DocPdfWordTest DocPdfAiTest DocPdfReviewGuardTest DocPdfRevisionCheckTest
 ```
 
 Then:

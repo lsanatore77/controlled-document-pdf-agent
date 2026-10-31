@@ -28,6 +28,20 @@
 .btn-primary { min-height: 2.75rem; padding: 0 1.25rem; border-radius: 0.5rem; border: none; background: #0176d3; color: #ffffff; font-size: 0.875rem; font-weight: 600; cursor: pointer; }
 .btn-link { min-height: 2.75rem; padding: 0 0.25rem; border: none; background: transparent; color: #0176d3; font-size: 0.875rem; font-weight: 600; cursor: pointer; }
 
+/* New version of an existing document? */
+.match { margin: 1rem 1.5rem 0; padding: 1rem; border: 1px solid #f9c87c; border-radius: 0.75rem; background: #fef6e9; display: flex; flex-direction: column; gap: 0.75rem; }
+.match-top { display: flex; align-items: flex-start; gap: 0.75rem; }
+.match-icon { width: 2rem; height: 2rem; border-radius: 0.5rem; background: #ffffff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; --slds-c-icon-color-foreground-default: #8c4b02; }
+.match-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.125rem; }
+.match-title { font-weight: 700; font-size: 0.9375rem; color: #181818; word-break: break-word; }
+.match-sub { font-size: 0.8125rem; color: #3e3e3c; word-break: break-word; }
+.match-reason { font-size: 0.8125rem; color: #5c5c5c; }
+.match-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.match-note { font-size: 0.8125rem; }
+.match-compare { background: #ffffff; border-radius: 0.75rem; }
+.match-dismissed { margin: 0.75rem 1.5rem 0; display: flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; color: #5c5c5c; }
+.match + .summary, .match-dismissed + .summary { margin-top: 1rem; border-top: 1px solid #e5e5e5; }
+
 /* What will be created */
 .summary { padding: 1rem 1.5rem; background: #fafaf9; border-bottom: 1px solid #e5e5e5; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
 .sum-item { display: flex; flex-direction: column; gap: 0.125rem; min-width: 0; }

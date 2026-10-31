@@ -43,6 +43,27 @@ public with sharing class DocPdfReviewController {
         @AuraEnabled public String createdRecordName;
         @AuraEnabled public String aiStatus;
         @AuraEnabled public List<RowDto> rows = new List<RowDto>();
+        /** An existing document this file may be a new version of (DocPdfRevisionCheck), or null. */
+        @AuraEnabled public MatchDto match;
+    }
+
+    public class MatchDto {
+        @AuraEnabled public String documentId;
+        @AuraEnabled public String name;
+        @AuraEnabled public String documentNumber;
+        @AuraEnabled public String title;
+        @AuraEnabled public String revision;
+        @AuraEnabled public String status;
+        @AuraEnabled public String kind;
+        @AuraEnabled public String reason;
+        @AuraEnabled public Boolean compared = false;
+    }
+
+    public class CompareResult {
+        @AuraEnabled public Boolean success = false;
+        @AuraEnabled public Boolean compared = false;
+        @AuraEnabled public String verdict;
+        @AuraEnabled public String message;
     }
 
     @AuraEnabled
@@ -64,6 +85,13 @@ public with sharing class DocPdfReviewController {
             out.createdRecordId = p.Created_Record_Id__c;
             out.createdRecordName = p.Created_Record_Name__c;
             out.aiStatus = p.AI_Status__c;
+            if (p.Status__c != 'Created' && p.Mode__c != 'Compare') {
+                try {
+                    out.match = matchOf(p);
+                } catch (Exception e) {
+                    out.match = null; // The banner is a hint: the review still loads without it.
+                }
+            }
 
             for (Doc_PDF_Field__c f : [
                 SELECT Id, Field_API_Name__c, Field_Label__c, Section__c, Source__c, Field_Type__c,
@@ -144,6 +172,73 @@ public with sharing class DocPdfReviewController {
         return out;
     }
 
+    /**
+     * Compare button on the review's "new version?" banner: compares the file with the matched
+     * document (DocPdfCompareAction). The review stays open; the comparison is saved on the proposal
+     * and shown by the comparison component.
+     */
+    @AuraEnabled
+    public static CompareResult compareWithMatch(String proposalId) {
+        CompareResult out = new CompareResult();
+        try {
+            Doc_PDF_Proposal__c p = findProposal(proposalId);
+            if (p == null || p.Controlled_Document__c == null) {
+                out.message = 'There is no existing document to compare with.';
+                return out;
+            }
+            if (p.Status__c == 'Created') {
+                out.message = 'This file was already used to create ' + p.Created_Record_Name__c + '.';
+                return out;
+            }
+            DocPdfCompareAction.Result r = DocPdfCompareAction.compareForReview(p.Id, p.Controlled_Document__c);
+            out.success = r.success == true;
+            out.compared = r.compared == true;
+            out.verdict = r.verdict;
+            out.message = r.message;
+        } catch (Exception e) {
+            out.message = 'The comparison could not be completed: ' + e.getMessage();
+        }
+        return out;
+    }
+
+    private static MatchDto matchOf(Doc_PDF_Proposal__c p) {
+        if (p.Controlled_Document__c == null) {
+            return null;
+        }
+        List<compliancequest__SQX_Controlled_Document__c> ds = [
+            SELECT Id, Name, compliancequest__Document_Number__c, compliancequest__Title__c,
+                   compliancequest__Revision__c, compliancequest__Document_Status__c
+            FROM compliancequest__SQX_Controlled_Document__c
+            WHERE Id = :p.Controlled_Document__c WITH USER_MODE LIMIT 1
+        ];
+        if (ds.isEmpty()) {
+            return null;
+        }
+        compliancequest__SQX_Controlled_Document__c d = ds[0];
+        MatchDto m = new MatchDto();
+        m.documentId = d.Id;
+        m.name = d.Name;
+        m.documentNumber = d.compliancequest__Document_Number__c;
+        m.title = d.compliancequest__Title__c;
+        m.revision = d.compliancequest__Revision__c;
+        m.status = d.compliancequest__Document_Status__c;
+        m.kind = p.Match_Verdict__c;
+        m.compared = String.isNotBlank(p.Old_Content_Version_Id__c);
+        String shared = p.Match_Score__c == null ? '' : p.Match_Score__c.setScale(0) + '% of the text matches';
+        if (p.Match_Verdict__c == DocPdfRevisionCheck.SAME_NUMBER) {
+            m.reason = 'The file has the same document number (' + d.compliancequest__Document_Number__c + ')'
+                + (shared == '' ? '' : ', and ' + shared);
+        } else if (p.Match_Verdict__c == DocPdfRevisionCheck.SAME_CONTENT) {
+            m.reason = 'Most of the text matches (' + p.Match_Score__c.setScale(0) + '%), though the number differs';
+        } else if (p.Match_Verdict__c == DocPdfRevisionCheck.SAME_TITLE) {
+            m.reason = 'The title matches' + (shared == '' ? '' : ', and ' + shared);
+        } else {
+            m.reason = 'It looks similar';
+        }
+        m.reason += '.';
+        return m;
+    }
+
     /** The given proposal, or the user's latest one that is ready for review. Also used by DocPdfCreateDocumentAction. */
     public static Doc_PDF_Proposal__c findProposal(String proposalId) {
         List<Doc_PDF_Proposal__c> ps;
@@ -151,14 +246,16 @@ public with sharing class DocPdfReviewController {
             Id pid = Id.valueOf(proposalId.trim());
             ps = [
                 SELECT Id, Name, Status__c, File_Name__c, Pages_Read__c, Total_Pages__c,
-                       Created_Record_Id__c, Created_Record_Name__c, AI_Status__c
+                       Created_Record_Id__c, Created_Record_Name__c, AI_Status__c,
+                       Mode__c, Controlled_Document__c, Match_Verdict__c, Match_Score__c, Old_Content_Version_Id__c
                 FROM Doc_PDF_Proposal__c WHERE Id = :pid WITH USER_MODE LIMIT 1
             ];
         } else {
             Id me = UserInfo.getUserId();
             ps = [
                 SELECT Id, Name, Status__c, File_Name__c, Pages_Read__c, Total_Pages__c,
-                       Created_Record_Id__c, Created_Record_Name__c, AI_Status__c
+                       Created_Record_Id__c, Created_Record_Name__c, AI_Status__c,
+                       Mode__c, Controlled_Document__c, Match_Verdict__c, Match_Score__c, Old_Content_Version_Id__c
                 FROM Doc_PDF_Proposal__c
                 WHERE OwnerId = :me AND Status__c = 'Ready for Review'
                 WITH USER_MODE

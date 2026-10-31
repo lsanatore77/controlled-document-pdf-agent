@@ -1,6 +1,8 @@
 import { LightningElement, api } from 'lwc';
+import { NavigationMixin } from 'lightning/navigation';
 import getReview from '@salesforce/apex/DocPdfReviewController.getReview';
 import saveDecisions from '@salesforce/apex/DocPdfReviewController.saveDecisions';
+import compareWithMatch from '@salesforce/apex/DocPdfReviewController.compareWithMatch';
 
 const SAVE_DELAY_MS = 400;
 
@@ -41,7 +43,7 @@ const NUMBER_FIELD = 'compliancequest__document_number__c';
  * Create action, which reads the saved decisions and creates the record (or lists what is
  * still undecided).
  */
-export default class DocPdfReview extends LightningElement {
+export default class DocPdfReview extends NavigationMixin(LightningElement) {
     @api readOnly = false;
 
     _value = {};
@@ -61,6 +63,12 @@ export default class DocPdfReview extends LightningElement {
     saveError;
     _saveTimer;
     _pendingJson;
+    match; // existing document this file may be a new version of (revision check)
+    matchDismissed = false;
+    comparing = false;
+    compareError;
+    showComparison = false;
+    compared = false;
 
     @api
     get value() {
@@ -88,6 +96,8 @@ export default class DocPdfReview extends LightningElement {
                 this.status = res.status;
                 this.createdName = res.createdRecordName;
                 this.aiStatus = res.aiStatus;
+                this.match = res.match || undefined;
+                this.compared = !!(res.match && res.match.compared);
                 this.rows = (res.rows || []).map((r) => this.initRow(r));
                 this.notify(false);
             })
@@ -139,6 +149,84 @@ export default class DocPdfReview extends LightningElement {
 
     get ready() {
         return !this.loading && !this.error && !this.alreadyCreated;
+    }
+
+    // ------------------------------------------------------------------ new version of an existing document?
+
+    get showMatch() {
+        return !!this.match && !this.matchDismissed;
+    }
+
+    get matchDetail() {
+        const m = this.match || {};
+        const parts = [];
+        if (m.title) {
+            parts.push(m.title);
+        }
+        if (m.revision) {
+            parts.push('Revision ' + m.revision);
+        }
+        if (m.status) {
+            parts.push(m.status);
+        }
+        return parts.join(' · ');
+    }
+
+    get compareLabel() {
+        if (this.comparing) {
+            return 'Comparing...';
+        }
+        if (this.compared) {
+            return this.showComparison ? 'Hide comparison' : 'Show comparison';
+        }
+        return 'Compare';
+    }
+
+    get comparisonValue() {
+        return { proposalId: this.proposalId };
+    }
+
+    handleCompare() {
+        if (this.compared) {
+            this.showComparison = !this.showComparison;
+            return;
+        }
+        this.comparing = true;
+        this.compareError = undefined;
+        compareWithMatch({ proposalId: this.proposalId })
+            .then((res) => {
+                if (res && res.success) {
+                    this.compared = true;
+                    this.showComparison = true;
+                } else {
+                    this.compareError = (res && res.message) || 'The comparison could not be completed.';
+                }
+            })
+            .catch((e) => {
+                this.compareError = (e && e.body && e.body.message) || 'The comparison could not be completed.';
+            })
+            .finally(() => {
+                this.comparing = false;
+            });
+    }
+
+    handleOpenMatch() {
+        if (!this.match) {
+            return;
+        }
+        this[NavigationMixin.Navigate]({
+            type: 'standard__recordPage',
+            attributes: { recordId: this.match.documentId, actionName: 'view' }
+        });
+    }
+
+    handleCreateAnyway() {
+        this.matchDismissed = true;
+        this.showComparison = false;
+    }
+
+    handleShowMatch() {
+        this.matchDismissed = false;
     }
 
     get hasAiStatus() {
