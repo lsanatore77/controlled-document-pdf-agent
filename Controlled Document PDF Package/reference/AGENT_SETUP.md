@@ -6,6 +6,8 @@ The metadata deploy (README) carries everything the agent calls. The agent itsel
 1. Deploy the package and assign `Doc_From_PDF_Agent_Access` to yourself and the test users.
 2. Set the Google Vision key on the `Google_Cloud_Vision` Named Credential (README).
 3. Users also need their usual ComplianceQuest permissions to create and read Controlled Documents and their files.
+4. Assign the standard permission set **Prompt Template User** to every user of the agent or the screen flow (AI suggestions run as the user). A user without it got no review at all in basfplay (Nov 2026), so assign it with the package permission set.
+5. Add the users as members of the **Controlled Document Draft** and **Controlled Document Release** libraries (Author or Contributor), so new documents can use them.
 
 ## 2. Create or update the agent
 1. New agent: Setup > Agentforce Agents > **New Agent** > Agentforce Employee Agent, name **Controlled Document Agent**, API name `Controlled_Document_Agent`.

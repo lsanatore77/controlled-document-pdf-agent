@@ -31,6 +31,7 @@ Released versions install in any org and upgrade in place. Released `global` cod
 
 ## Not in the package (set up per org)
 - Google Vision key: Named Credential `Google_Cloud_Vision`.
+- Permission sets for every user: `enablement__Doc_From_PDF_Agent_Access` (from the package) **and** the standard **Prompt Template User**, plus their usual CQ permissions and membership of the Draft and Release libraries.
 - Prompt template `Doc_PDF_Field_Suggestions` (Prompt Builder; text in `reference/Doc_PDF_Field_Suggestions_prompt.txt`).
 - The agent itself: paste `Controlled_Document_Agent_Script.txt` in Agent Builder. In a packaged org, the three `complex_data_type_name` values use the `enablement__` prefix instead of `c__`.
 - Released TMP templates (TMP-POL-000, TMP-PROC-000, TMP-WI-000) with status Current.
