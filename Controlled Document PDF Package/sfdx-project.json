@@ -1,13 +1,14 @@
 {
   "packageDirectories": [
     {
-      "versionName": "ver 0.1",
-      "versionNumber": "0.1.0.NEXT",
+      "versionName": "ver 0.2",
+      "versionNumber": "0.2.0.NEXT",
+      "ancestorVersion": "HIGHEST",
       "path": "force-app",
       "default": true,
       "package": "Enablement - Document Agent",
       "versionDescription": "Controlled Document agent and screen flow: create from PDF or Word, compare.",
-      "dependencies": [{ "package": "04tRn000000qxC5IAI" }]
+      "dependencies": [{ "package": "04tKg000000xAgUIAU" }]
     }
   ],
   "name": "controlled-document-from-pdf-agent",
@@ -15,6 +16,7 @@
   "sfdcLoginUrl": "https://test.salesforce.com",
   "sourceApiVersion": "66.0",
   "packageAliases": {
-    "Enablement - Document Agent": "0Hofn0000001ZTZCA2"
+    "Enablement - Document Agent": "0Hofn0000001ZTZCA2",
+    "Enablement - Document Agent@0.1.0-3": "04tfn000007uraHAAQ"
   }
 }
