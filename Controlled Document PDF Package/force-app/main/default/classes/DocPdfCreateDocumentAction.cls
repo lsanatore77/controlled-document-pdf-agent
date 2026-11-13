@@ -16,7 +16,8 @@
  * Agent Setting) unless the user picked a template themselves. ComplianceQuest numbers the document
  * when its auto-numbering is set up. With no released template, or when ComplianceQuest leaves the
  * number blank or as its AUTO placeholder, the Document Number row is used (the category prefix plus
- * the next free number, checked again here).
+ * the next free number, checked again here). A document without a Category is always numbered here
+ * (DOC- prefix), never left to ComplianceQuest.
  * A document is never saved without a number.
  */
 global with sharing class DocPdfCreateDocumentAction {
@@ -155,7 +156,7 @@ global with sharing class DocPdfCreateDocumentAction {
             String firstError;
             Boolean leftAuto = false;
             Boolean saved = false;
-            if (plan.templateId != null) {
+            if (plan.letComplianceQuestNumber()) {
                 // ComplianceQuest numbers it when its auto-numbering is set up (an Auto Number record named
                 // after the record type). Without one it leaves the number as AUTO: then the next free
                 // category number is used instead.
@@ -344,6 +345,15 @@ global with sharing class DocPdfCreateDocumentAction {
         public String category;
         public String prefix;
         public String wantedNumber;
+
+        /**
+         * True when ComplianceQuest is left to number the document: a template is set and the document
+         * has a Category. Without a Category ComplianceQuest's auto-numbering can leave AUTO, so the
+         * agent sets the number itself (the template, if any, is still set).
+         */
+        public Boolean letComplianceQuestNumber() {
+            return templateId != null && String.isNotBlank(category);
+        }
     }
 
     /** ComplianceQuest's placeholder number when its auto-numbering has no Auto Number record to use. */

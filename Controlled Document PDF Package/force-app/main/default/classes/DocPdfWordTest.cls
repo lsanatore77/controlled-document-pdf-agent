@@ -290,6 +290,27 @@ private class DocPdfWordTest {
     }
 
     @IsTest
+    static void noCategoryIsNumberedByTheAgent() {
+        // Without a Category, ComplianceQuest is not left to number the document, even with a template picked.
+        DocPdfNumbering.testLines = LINES;
+        List<Doc_PDF_Field__c> rows = new List<Doc_PDF_Field__c>{
+            new Doc_PDF_Field__c(Field_API_Name__c = 'compliancequest__Document_Category__c', Final_Value__c = null, Decision__c = 'clear'),
+            new Doc_PDF_Field__c(Field_API_Name__c = 'compliancequest__Document_Type__c', Final_Value__c = UserInfo.getUserId(),
+                Final_Display__c = 'Picked', Decision__c = 'edit'),
+            new Doc_PDF_Field__c(Field_API_Name__c = 'compliancequest__Document_Number__c', Decision__c = 'accept')
+        };
+        DocPdfCreateDocumentAction.NumberPlan plan = DocPdfCreateDocumentAction.planNumber(rows);
+        Assert.areEqual('DOC', plan.prefix);
+        Assert.areEqual('Picked', plan.templateName, 'The picked template is still set on the document.');
+        Assert.isFalse(plan.letComplianceQuestNumber(), 'No Category: the agent numbers it.');
+
+        rows[0].Final_Value__c = 'Policy';
+        rows[0].Decision__c = 'edit';
+        plan = DocPdfCreateDocumentAction.planNumber(rows);
+        Assert.isTrue(plan.letComplianceQuestNumber(), 'Category and template: ComplianceQuest numbers it.');
+    }
+
+    @IsTest
     static void autoPlaceholderIsNotANumber() {
         // ComplianceQuest leaves AUTO when its auto-numbering has no Auto Number record: the category number is used.
         Assert.isTrue(DocPdfCreateDocumentAction.notNumbered(null));
