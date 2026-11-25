@@ -47,6 +47,9 @@ You need to be there for about **30 minutes at the start**. After that it can ru
    `.claude/settings.json`). Then type `/permissions`. The **Allow** list should show the `sf ...` commands.
    If it doesn't, note it; you'll approve them in step 9 instead.
 
+   Then type `/add-dir C:\Users\LouSanatore\Projects\CQ156zips` so Claude Code can unzip and edit files
+   in the zip folder without asking. `/permissions` should then list **2** workspace directories.
+
 7. Press **Shift+Tab** until it shows **accept edits on**, so it can edit the two config files without asking.
 
 8. Paste this prompt:
