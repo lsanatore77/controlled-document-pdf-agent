@@ -4,6 +4,7 @@
     "BASH_MAX_TIMEOUT_MS": "600000"
   },
   "permissions": {
+    "additionalDirectories": ["C:\\Users\\LouSanatore\\Projects\\CQ156zips"],
     "allow": [
       "Bash(sf org list:*)",
       "Bash(sf org display:*)",
