@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WebLink xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Create_from_File</fullName>
+    <availability>online</availability>
+    <description>enablement: opens the Controlled Document Agent and asks it to create a controlled document from a file.</description>
+    <displayType>massActionButton</displayType>
+    <linkType>url</linkType>
+    <masterLabel>Create from File</masterLabel>
+    <openType>replace</openType>
+    <protected>false</protected>
+    <requireRowSelection>false</requireRowSelection>
+    <url>/lightning/cmp/c__docAgentLauncher</url>
+</WebLink>

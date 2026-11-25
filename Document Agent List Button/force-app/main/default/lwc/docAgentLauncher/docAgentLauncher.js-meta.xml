@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>66.0</apiVersion>
+    <isExposed>true</isExposed>
+    <masterLabel>Doc Agent Launcher (enablement)</masterLabel>
+    <description>enablement: opened by the Create from File list button; opens the Controlled Document Agent with a prompt, then returns to the list.</description>
+    <targets>
+        <target>lightning__UrlAddressable</target>
+    </targets>
+</LightningComponentBundle>
