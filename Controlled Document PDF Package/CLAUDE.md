@@ -30,6 +30,9 @@ real orgs; Lou does those with you later.
    install guide's, as the runbook says (A0.2). If master's ComplianceQuest is older than
    `04tKg000000xAgUIAU`, stop.
 7. Pass `--target-org` / `--target-dev-hub` explicitly on every command. Don't rely on defaults.
+8. **Run the package build (section B) only once.** golden allows 6 package version builds per 24 hours
+   (`Package2VersionCreates` in `sf limits api display --target-org golden`). If the build fails, stop and
+   write the summary; don't build again.
 
 ## Long-running commands (important)
 

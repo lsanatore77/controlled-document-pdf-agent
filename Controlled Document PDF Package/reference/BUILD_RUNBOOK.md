@@ -41,6 +41,14 @@ Source documents (Confluence, ComplianceQuest space):
 
 ### A0. Checks and downloads before you start (10 minutes)
 
+0. **golden has room** (Developer Edition Dev Hub: 3 active scratch orgs, 5 active snapshots,
+   6 package builds per 24 hours)
+   ```
+   sf limits api display --target-org golden
+   ```
+   ✔ Remaining: **ActiveScratchOrgs** ≥ 1, **DailyScratchOrgs** ≥ 1, **ActiveOrgSnapshots** ≥ 1,
+   **Package2VersionCreates** ≥ 1. If not, Lou deletes an old scratch org or snapshot first.
+
 1. **golden's shape is Active, and golden's org Id**
    ```
    sf org list shape
@@ -224,6 +232,6 @@ After each upgrade (0.3 and later):
 | Snapshot | Use | Expires |
 |---|---|---|
 | CQ16BaseSnap | CQ 16.0 fuller install: Atlas seed, dev | 2027-01-28 |
-| CQ156BaseSnap | CQ 15.6 core, **no Einstein**: not enough for package builds | 2027-02-06 |
+| ~~CQ156BaseSnap~~ | Deleted Nov 25, 2026 (no Einstein, couldn't build the package) | - |
 | CQ16AISnap | CQ 16 with AI (made in another chat) | 2027-02-19 |
 | CQ156AISnap | Package builds (to be created) | 90 days after creation |
