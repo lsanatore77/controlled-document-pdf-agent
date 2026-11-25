@@ -4,6 +4,7 @@
     <availability>online</availability>
     <description>enablement: opens the Controlled Document Agent and asks it to create a controlled document from a file.</description>
     <displayType>massActionButton</displayType>
+    <encodingKey>UTF-8</encodingKey>
     <linkType>url</linkType>
     <masterLabel>Create from File</masterLabel>
     <openType>replace</openType>
