@@ -10,9 +10,11 @@ One package with both versions of the feature:
 | Namespace | `enablement` (registered in a Developer Edition org, linked to the golden Dev Hub) |
 | Dev Hub | `golden` |
 | Package Id | `0Hofn0000001ZTZCA2` |
-| Dependency | ComplianceQuest 16.0.0.40 (`04tRn000000qxC5IAI`); install orgs need this version or newer |
+| Dependency | ComplianceQuest 15.6.0.3 (`04tKg000000xAgUIAU`) since 0.2.0; install orgs need this version or newer |
 
 ## Build a beta version
+**Follow `reference/BUILD_RUNBOOK.md`**: the build runs in a snapshot (`config/build-def.json`) that must have CQ 15.6.0.3, Einstein generative AI and Agentforce, and the runbook checks each step first.
+
 ```
 sf package version create --package "Enablement - Document Agent" --installation-key-bypass --code-coverage --wait 60 --target-dev-hub golden
 ```
