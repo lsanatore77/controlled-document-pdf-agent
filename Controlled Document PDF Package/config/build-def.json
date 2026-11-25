@@ -1,7 +1,7 @@
 {
   "orgName": "Enablement Document Agent build",
   "edition": "Enterprise",
-  "features": ["EnableSetPasswordInApi", "Einstein1AIPlatform"],
+  "features": ["EnableSetPasswordInApi", "Einstein1AIPlatform", "StateAndCountryPicklist"],
   "settings": {
     "customAddressFieldSettings": { "enableCustomAddressField": true },
     "lightningExperienceSettings": { "enableS1DesktopEnabled": true },
