@@ -25,6 +25,8 @@
         <members>DocPdfRecommendationBuilder</members>
         <members>DocPdfReview</members>
         <members>DocPdfReviewController</members>
+        <members>DocAgentLauncherController</members>
+        <members>DocAgentLauncherControllerTest</members>
         <members>DocPdfResolveProposalAction</members>
         <members>DocPdfSelectFileAction</members>
         <members>DocPdfUploadController</members>
@@ -122,6 +124,7 @@
     <types>
         <members>docPdfUpload</members>
         <members>docPdfReview</members>
+        <members>docAgentLauncher</members>
         <members>docPdfComparison</members>
         <members>docPdfFlowUpload</members>
         <members>docPdfFlowReview</members>
@@ -133,6 +136,10 @@
         <members>docPdfReviewType</members>
         <members>docPdfComparisonType</members>
         <name>LightningTypeBundle</name>
+    </types>
+    <types>
+        <members>compliancequest__SQX_Controlled_Document__c.Create_from_File</members>
+        <name>WebLink</name>
     </types>
     <types>
         <members>Doc_From_PDF_Agent_Access</members>

@@ -15,6 +15,7 @@
     <classAccesses><apexClass>DocPdfReviewController</apexClass><enabled>true</enabled></classAccesses>
     <classAccesses><apexClass>DocPdfFileSelection</apexClass><enabled>true</enabled></classAccesses>
     <classAccesses><apexClass>DocPdfReview</apexClass><enabled>true</enabled></classAccesses>
+    <classAccesses><apexClass>DocAgentLauncherController</apexClass><enabled>true</enabled></classAccesses>
     <classAccesses><apexClass>DocPdfMatchService</apexClass><enabled>true</enabled></classAccesses>
     <classAccesses><apexClass>DocPdfCompareService</apexClass><enabled>true</enabled></classAccesses>
     <classAccesses><apexClass>DocPdfCompareAction</apexClass><enabled>true</enabled></classAccesses>

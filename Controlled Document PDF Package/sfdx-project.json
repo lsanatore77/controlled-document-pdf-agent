@@ -7,7 +7,7 @@
       "path": "force-app",
       "default": true,
       "package": "Enablement - Document Agent",
-      "versionDescription": "Controlled Document agent and screen flow: create from PDF or Word, compare. 0.3: uses the next free category number when ComplianceQuest leaves AUTO; file wording for Word uploads.",
+      "versionDescription": "Controlled Document agent and screen flow: create from PDF or Word, compare. 0.3: Create from File list button that opens the agent; next free number when ComplianceQuest leaves AUTO or the category is blank; file wording for Word uploads.",
       "dependencies": [
         {
           "package": "04tKg000000xAgUIAU"

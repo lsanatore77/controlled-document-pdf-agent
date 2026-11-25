@@ -1,0 +1,10 @@
+<template>
+    <template lwc:if={error}>
+        <lightning-card title="Controlled Document Agent" icon-name="utility:einstein">
+            <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+                <p class="slds-text-color_error slds-m-bottom_small">{error}</p>
+                <lightning-button label="Back to the list" onclick={handleBack}></lightning-button>
+            </div>
+        </lightning-card>
+    </template>
+</template>
