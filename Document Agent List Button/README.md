@@ -37,6 +37,10 @@ Add to the button URL to change the agent or the prompt, for example
 
 - `c__agent` the agent's API name
 - `c__prompt` the prompt to send
+- `c__wait=1` wait for the panel to accept the prompt before going back (slower; use if the prompt ever doesn't arrive)
+
+The launcher shows nothing unless something goes wrong. The agent's Id is remembered in the browser
+tab after the first click, so later clicks skip the server lookup.
 
 ## In a packaged org (later)
 

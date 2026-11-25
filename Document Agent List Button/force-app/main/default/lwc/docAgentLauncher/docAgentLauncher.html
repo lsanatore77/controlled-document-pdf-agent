@@ -1,16 +1,10 @@
 <template>
-    <lightning-card title="Controlled Document Agent" icon-name="utility:einstein">
-        <div class="slds-p-horizontal_medium slds-p-bottom_medium">
-            <template lwc:if={error}>
+    <template lwc:if={error}>
+        <lightning-card title="Controlled Document Agent" icon-name="utility:einstein">
+            <div class="slds-p-horizontal_medium slds-p-bottom_medium">
                 <p class="slds-text-color_error slds-m-bottom_small">{error}</p>
                 <lightning-button label="Back to the list" onclick={handleBack}></lightning-button>
-            </template>
-            <template lwc:else>
-                <div class="slds-is-relative" style="height: 4rem;">
-                    <lightning-spinner alternative-text="Opening the agent" size="small"></lightning-spinner>
-                </div>
-                <p class="slds-text-align_center">{status}</p>
-            </template>
-        </div>
-    </lightning-card>
+            </div>
+        </lightning-card>
+    </template>
 </template>
