@@ -1,0 +1,42 @@
+{
+  "env": {
+    "BASH_DEFAULT_TIMEOUT_MS": "600000",
+    "BASH_MAX_TIMEOUT_MS": "600000"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(sf org list:*)",
+      "Bash(sf org display:*)",
+      "Bash(sf org open:*)",
+      "Bash(sf org create scratch:*)",
+      "Bash(sf org resume scratch:*)",
+      "Bash(sf org create snapshot:*)",
+      "Bash(sf package installed list:*)",
+      "Bash(sf package install:*)",
+      "Bash(sf package install report:*)",
+      "Bash(sf project deploy start:*)",
+      "Bash(sf project deploy report:*)",
+      "Bash(sf project deploy resume:*)",
+      "Bash(sf package version create:*)",
+      "Bash(sf package version create list:*)",
+      "Bash(sf package version create report:*)",
+      "Bash(sf package version report:*)",
+      "Bash(sf package version list:*)",
+      "Bash(powershell -NoProfile -Command Expand-Archive:*)",
+      "Bash(tar:*)",
+      "Bash(mkdir:*)",
+      "Bash(sleep:*)",
+      "Bash(ls:*)",
+      "Bash(dir:*)",
+      "Edit",
+      "Write"
+    ],
+    "deny": [
+      "Bash(sf package version promote:*)",
+      "Bash(sf org delete:*)",
+      "Bash(sf org create shape:*)",
+      "Bash(sf org login:*)",
+      "Bash(sf org logout:*)"
+    ]
+  }
+}

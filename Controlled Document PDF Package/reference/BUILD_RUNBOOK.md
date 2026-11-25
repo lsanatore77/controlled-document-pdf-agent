@@ -1,5 +1,9 @@
 # Building and releasing a package version (enablement)
 
+> **Running this with Claude Code?** Start with `reference/HANDOFF_CLAUDE_CODE.md`. Claude Code also reads
+> `CLAUDE.md`, which replaces this runbook's long `--wait` values with short waits plus status checks
+> (its commands stop after about 10 minutes).
+
 How to build, promote and roll out a new version of **Enablement - Document Agent**, with a check
 before every long step. Run every command from the **Controlled Document PDF Package** folder,
 outside OneDrive. Nothing here deploys code to golden or master: golden is only the Dev Hub.
@@ -39,7 +43,7 @@ Source documents (Confluence, ComplianceQuest space):
 
 1. **golden's shape is Active, and golden's org Id**
    ```
-   sf org list shape --target-dev-hub golden
+   sf org list shape
    sf org display --target-org golden
    ```
    ✔ Shape **Active**. Put golden's org Id (`00D...`) in `sourceOrg` in `config/cq156-ai-scratch-def.json`
@@ -103,8 +107,9 @@ sf package install report --request-id 0Hf... --target-org CQ156AI
 ```
 
 Deploy each zip the same way:
-1. Unzip it (`tar -xf <zip> -C <new empty folder>`), and find the folder that has `package.xml` directly
-   inside it. CQ's zips usually have one top folder (for example `...Src`) holding `package.xml`.
+1. Unzip it into a new empty folder (Windows: right-click > Extract All, or
+   `powershell -NoProfile -Command Expand-Archive -LiteralPath '<zip>' -DestinationPath '<new folder>'`),
+   and find the folder that has `package.xml` directly inside it. CQ's zips usually have one top folder (for example `...Src`) holding `package.xml`.
 2. Deploy **that folder**, with the test the guide specifies:
    ```
    sf project deploy start --metadata-dir "<folder that contains package.xml>" --target-org CQ156AI --test-level RunSpecifiedTests --tests compliancequest.SQX_Test_1931_ContentVersionPerm --wait 60
@@ -180,7 +185,7 @@ usually follow from it. Find the cause before building again.
 
 Check first:
 ```
-sf package version report --package 04t... --target-dev-hub golden
+sf package version report --package 04t... --target-dev-hub golden --verbose
 ```
 ✔ **Has Passed Code Coverage Check: true** (75% or more), and the version number is the one you meant to build.
 
