@@ -28,18 +28,41 @@ Always keep both. Without them, Salesforce's default build org can't install CQ 
 
 Snapshots expire 90 days after they're created and can't be extended or copied.
 
-1. **Scratch org with Einstein, Agentforce and Address fields** (about 5 minutes)
+The scratch org starts from **golden's org shape** (`sourceOrg`), which brings everything CQ's install
+guide needs (Notes, Digital Experiences, Enhanced Email, custom address fields, Translation Workbench,
+Chatter, CRM Content, ...). Org shape doesn't bring Einstein generative AI, so
+`config/cq156-ai-scratch-def.json` adds it and Agentforce on top. Don't replace the shape with a plain
+definition: CQ won't install without those settings.
+
+0. **Checks before you start** (1 minute)
+   ```
+   sf org list shape --target-dev-hub golden
+   sf org display --target-org golden
+   ```
+   ✔ golden's shape shows **Active**.
+   ✔ In `config/cq156-ai-scratch-def.json`, `sourceOrg` is golden's org Id (the `Id` from `sf org display`,
+   starting `00D`). Use the same value as in your `golden-shape-def.json`, which worked on Nov 8.
+   It must not say `PASTE_GOLDEN_ORG_ID_HERE`.
+
+1. **Scratch org from golden's shape, plus Einstein and Agentforce** (about 5 minutes)
    ```
    sf org create scratch --definition-file config/cq156-ai-scratch-def.json --alias CQ156AI --no-namespace --duration-days 7 --target-dev-hub golden --wait 30
    ```
    ✔ Ends with "Your scratch org is ready".
+   ✘ If it fails on `Einstein1AIPlatform` or an AI setting: stop and paste the error. Don't remove them
+   and carry on: the package needs them.
 
-2. **Install CQ 15.6.0.3** (about 15 minutes)
+2. **Install CQ 15.6.0.3** (about 15–30 minutes)
    ```
    sf package install --package 04tKg000000xAgUIAU --target-org CQ156AI --security-type AdminsOnly --no-prompt --wait 30
    sf package installed list --target-org CQ156AI
    ```
    ✔ ComplianceQuest 15.6.0.3 is listed.
+   If the install command stops waiting before it finishes, it keeps running in the org. Check it with the
+   request Id it printed (`0Hf...`) instead of installing again:
+   ```
+   sf package install report --request-id 0Hf... --target-org CQ156AI
+   ```
 
 3. **Dry run: does the whole package compile and pass its tests here?** (about 5–15 minutes)
    ```
@@ -81,8 +104,15 @@ sf package version create list --target-dev-hub golden --created-last-days 1
 If it fails: read the **first** error. Later errors ("Dependent class is invalid", "can't find the action")
 usually follow from it. Find the cause before building again.
 
-## C. Promote it (permanent)
+## C. Promote it (permanent: can't be undone)
 
+Check first:
+```
+sf package version report --package 04t... --target-dev-hub golden
+```
+✔ **Has Passed Code Coverage Check: true** (75% or more), and the version number is the one you meant to build.
+
+Promote:
 ```
 sf package version promote --package 04t... --no-prompt --target-dev-hub golden
 ```
@@ -90,11 +120,16 @@ sf package version promote --package 04t... --no-prompt --target-dev-hub golden
 
 ## D. Upgrade each org (one at a time)
 
+Order: **golden first** (test the list button there), then master and basfplay.
+
 Before each org:
 ```
 sf package installed list --target-org <org>
+sf data query --query "SELECT Id, DeveloperName FROM BotDefinition WHERE DeveloperName = 'Controlled_Document_Agent'" --target-org <org>
 ```
 ✔ ComplianceQuest is 15.6.0.3 or later; note the current Enablement - Document Agent version.
+✔ One agent row comes back. The list button finds the agent by this API name; if the org's agent has a
+different API name, the button says the agent wasn't found.
 
 Upgrade:
 ```

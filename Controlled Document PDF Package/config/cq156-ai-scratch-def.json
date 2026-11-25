@@ -1,10 +1,8 @@
 {
   "orgName": "CQ 15.6 with Einstein and Agentforce",
-  "edition": "Enterprise",
-  "features": ["EnableSetPasswordInApi", "Einstein1AIPlatform", "StateAndCountryPicklist"],
+  "sourceOrg": "PASTE_GOLDEN_ORG_ID_HERE",
+  "features": ["Einstein1AIPlatform"],
   "settings": {
-    "customAddressFieldSettings": { "enableCustomAddressField": true },
-    "lightningExperienceSettings": { "enableS1DesktopEnabled": true },
     "einsteinGptSettings": { "enableEinsteinGptPlatform": true },
     "agentPlatformSettings": { "enableAgentPlatform": true }
   }
