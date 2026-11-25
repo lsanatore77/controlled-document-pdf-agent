@@ -24,64 +24,136 @@ The Google Vision Named Credential is only used at run time (`callout:` text), s
 
 Always keep both. Without them, Salesforce's default build org can't install CQ (Address fields error, Nov 2026).
 
-## A. Make the build snapshot (once, then about every 80 days)
+## A. Make the 15.6 build snapshot (once, then about every 80 days)
 
-Snapshots expire 90 days after they're created and can't be extended or copied.
+Snapshots expire 90 days after they're created and can't be extended or copied. This snapshot mirrors
+**CQ16BaseSnap** (golden's shape + six CQ packages + CQ's external zips), but on CQ 15.6, plus Einstein
+generative AI and Agentforce, which the package needs. Allow 2–3 hours, mostly waiting.
 
-The scratch org starts from **golden's org shape** (`sourceOrg`), which brings everything CQ's install
-guide needs (Notes, Digital Experiences, Enhanced Email, custom address fields, Translation Workbench,
-Chatter, CRM Content, ...). Org shape doesn't bring Einstein generative AI, so
-`config/cq156-ai-scratch-def.json` adds it and Agentforce on top. Don't replace the shape with a plain
-definition: CQ won't install without those settings.
+Source documents (Confluence, ComplianceQuest space):
+- *IQ for CQ Winter 2025 - Fresh Installation* (this is the CQ 15.6 install)
+- *IQ for CQ Forms Extension Winter 2025 - Fresh Installation*
+- Zips: KB page *Minor Release - Winter 25* (CQ Release Notes & Installation Portal)
 
-0. **Checks before you start** (1 minute)
+### A0. Checks and downloads before you start (10 minutes)
+
+1. **golden's shape is Active, and golden's org Id**
    ```
    sf org list shape --target-dev-hub golden
    sf org display --target-org golden
    ```
-   ✔ golden's shape shows **Active**.
-   ✔ In `config/cq156-ai-scratch-def.json`, `sourceOrg` is golden's org Id (the `Id` from `sf org display`,
-   starting `00D`). Use the same value as in your `golden-shape-def.json`, which worked on Nov 8.
-   It must not say `PASTE_GOLDEN_ORG_ID_HERE`.
+   ✔ Shape **Active**. Put golden's org Id (`00D...`) in `sourceOrg` in `config/cq156-ai-scratch-def.json`
+   (same value as your `golden-shape-def.json`). It must not say `PASTE_GOLDEN_ORG_ID_HERE`.
 
-1. **Scratch org from golden's shape, plus Einstein and Agentforce** (about 5 minutes)
+2. **Exact package versions: copy them from master**, so the snapshot matches master
    ```
-   sf org create scratch --definition-file config/cq156-ai-scratch-def.json --alias CQ156AI --no-namespace --duration-days 7 --target-dev-hub golden --wait 30
+   sf package installed list --target-org master
    ```
-   ✔ Ends with "Your scratch org is ready".
-   ✘ If it fails on `Einstein1AIPlatform` or an AI setting: stop and paste the error. Don't remove them
-   and carry on: the package needs them.
+   Write down the **04t** and version of each of these six. Use master's 04t in step A2, not the guide's:
 
-2. **Install CQ 15.6.0.3** (about 15–30 minutes)
-   ```
-   sf package install --package 04tKg000000xAgUIAU --target-org CQ156AI --security-type AdminsOnly --no-prompt --wait 30
-   sf package installed list --target-org CQ156AI
-   ```
-   ✔ ComplianceQuest 15.6.0.3 is listed.
-   If the install command stops waiting before it finishes, it keeps running in the org. Check it with the
-   request Id it printed (`0Hf...`) instead of installing again:
-   ```
-   sf package install report --request-id 0Hf... --target-org CQ156AI
-   ```
+   | Package | Install guide's 04t (15.6.0 fresh) | Use |
+   |---|---|---|
+   | ComplianceQuest | `04tRn000000kkcXIAQ` (15.6.0) | **master's**. Must be `04tKg000000xAgUIAU` or a later 15.6.x, or the build fails its dependency |
+   | CQ Document Extensions App | `04tRn000000klC1IAI` (15.6.0) | master's |
+   | ComplianceQuest User Interface | `04tRn000000kV2PIAU` (15.5.0) | master's |
+   | CQ Approval Extension | `04tRn000000kV8rIAE` (15.5.0) | master's |
+   | CQ Forms Extension | `04tRn000000kVK9IAM` (15.5.0) | master's |
+   | Salesforce Mobile Apps | `04t4V000001i8c0QAA` (1.24) | master's |
 
-3. **Dry run: does the whole package compile and pass its tests here?** (about 5–15 minutes)
-   ```
-   sf project deploy start --source-dir force-app --target-org CQ156AI --dry-run --test-level RunLocalTests --wait 30
-   ```
-   ✔ "Succeeded" (nothing is saved, it only checks). **Don't go on unless this passes**: it tests
-   the same things the package build will.
+   ✘ If master's ComplianceQuest is *older* than `04tKg000000xAgUIAU` or missing: stop and ask.
 
-4. **Snapshot it** (a few minutes to an hour)
-   ```
-   sf org create snapshot --source-org CQ156AI --name CQ156AISnap --target-dev-hub golden --description "CQ 15.6.0.3 core, Einstein GenAI, Agentforce"
-   sf org list snapshot --target-dev-hub golden
-   ```
-   ✔ CQ156AISnap shows **Active**. Note its expiration date.
+3. **Download the six fresh-install zips** from *Minor Release - Winter 25* into one short folder outside
+   OneDrive (for example `C:\Users\LouSanatore\Projects\CQ156zips`). Shorten names if unzipping fails.
+   - `extPkg_CQWinter25_Fresh_Installation.zip`
+   - `extPkg_CQWinter25_CQDocument_Extensions_Fresh_Installation.zip`
+   - `extPkg_CQWinter25_User_Interface.zip`
+   - `extPkg_CQWinter25_CQApproval_Extension_Fresh_Installation.zip`
+   - `extPkg_CQWinter25_CQPlatformEventSubscriberConfigs_Fresh_Installation.zip`
+   - `extPkg_CQWinter25_CQForms_Extension_Fresh_Installation.zip`
 
-5. **Point the build at it**: in `config/build-def.json`, set `"snapshot": "CQ156AISnap"`. Save.
+   Use the **Fresh_Installation** zips only, not the `Upgrade_From_...` ones.
 
-When renewing, give the new snapshot a new name (for example `CQ156AISnap0227`), switch
-`build-def.json` to it only after it's Active, then delete the old one.
+### A1. Scratch org from golden's shape, plus Einstein and Agentforce (about 5 minutes)
+
+```
+sf org create scratch --definition-file config/cq156-ai-scratch-def.json --alias CQ156AI --no-namespace --duration-days 14 --target-dev-hub golden --wait 30
+```
+✔ "Your scratch org is ready".
+✘ If it fails on `Einstein1AIPlatform` or an AI setting: stop and paste the error. Don't remove them.
+
+Then, in the org (`sf org open --target-org CQ156AI`), set the two things the zips need:
+- Setup > **Process Automation Settings** > **Default Workflow User** = the scratch org's admin user. Save.
+- The prerequisite list at the top of the install guide (Notes, Digital Experiences, Enhanced Email,
+  custom address fields, Translation Workbench, Chatter, CRM Content, ...): golden's shape normally
+  brings these. Glance down the list and switch on anything that's off.
+- The guide's pre-installation record types (Account "Default", Event "Standard", Task "Standard Task",
+  and New Event / New Task global actions), as you did for 16.0.
+
+### A2. Install the packages and zips, in the guide's order
+
+Install each package with master's 04t from A0.2, then check it's listed before the next one:
+```
+sf package install --package 04t... --target-org CQ156AI --security-type AdminsOnly --no-prompt --wait 60
+sf package installed list --target-org CQ156AI
+```
+If the command stops waiting before the install finishes, it keeps running in the org. Check with the
+request Id it printed instead of installing again:
+```
+sf package install report --request-id 0Hf... --target-org CQ156AI
+```
+
+Deploy each zip the same way:
+1. Unzip it (`tar -xf <zip> -C <new empty folder>`), and find the folder that has `package.xml` directly
+   inside it. CQ's zips usually have one top folder (for example `...Src`) holding `package.xml`.
+2. Deploy **that folder**, with the test the guide specifies:
+   ```
+   sf project deploy start --metadata-dir "<folder that contains package.xml>" --target-org CQ156AI --test-level RunSpecifiedTests --tests compliancequest.SQX_Test_1931_ContentVersionPerm --wait 60
+   ```
+✔ "Succeeded" for each. Deploying the unzipped folder avoids guessing how each zip is laid out.
+
+| # | Install / deploy | Check |
+|---|---|---|
+| 1 | ComplianceQuest (core) | Listed, same version as master |
+| 2 | `extPkg_CQWinter25_Fresh_Installation.zip` | Succeeded. "Permission Set Groups is updating": wait 5 minutes and run it again; if it keeps failing, split it as for 16.0 (`1a` without groups, `1b` groups only) |
+| 3 | CQ Document Extensions App | Listed |
+| 4 | `extPkg_CQWinter25_CQDocument_Extensions_Fresh_Installation.zip` | Succeeded |
+| 5 | ComplianceQuest User Interface | Listed |
+| 6 | `extPkg_CQWinter25_User_Interface.zip` | Succeeded |
+| 7 | CQ Approval Extension | Listed |
+| 8 | `extPkg_CQWinter25_CQApproval_Extension_Fresh_Installation.zip` | Succeeded |
+| 9 | `extPkg_CQWinter25_CQPlatformEventSubscriberConfigs_Fresh_Installation.zip` | After unzipping, **before** deploying: in every file in the `PlatformEventSubscriberConfigs` folder, replace `<user>cqsupport@compliancequest.com</user>` with `<user>` + the scratch org's admin username (the Default Workflow User; `sf org display --target-org CQ156AI` shows it) + `</user>`. VS Code's Replace in Files (Ctrl+Shift+H) does it in one go. Then deploy the folder. Succeeded |
+| 10 | Salesforce Mobile Apps | Listed |
+| 11 | CQ Forms Extension | Listed |
+| 12 | `extPkg_CQWinter25_CQForms_Extension_Fresh_Installation.zip` | Succeeded |
+
+Then confirm all six are there:
+```
+sf package installed list --target-org CQ156AI
+```
+✔ The same six packages and versions as master.
+
+### A3. Dry run: does the whole Document Agent package compile and pass its tests here? (5–15 minutes)
+
+```
+sf project deploy start --source-dir force-app --target-org CQ156AI --dry-run --test-level RunLocalTests --wait 30
+```
+✔ "Succeeded" (nothing is saved, it only checks). **Don't snapshot unless this passes**: it tests the
+same things the package build will (CQ, Einstein generative AI, Agentforce, our code and tests).
+
+### A4. Snapshot it (a few minutes to an hour)
+
+```
+sf org create snapshot --source-org CQ156AI --name CQ156AISnap --target-dev-hub golden --description "CQ 15.6 as master (6 packages + zips), Einstein GenAI, Agentforce"
+sf org list snapshot --target-dev-hub golden
+```
+✔ CQ156AISnap shows **Active**. Note its expiration date.
+
+### A5. Point the build at it
+
+In `config/build-def.json`, set `"snapshot": "CQ156AISnap"`. Save.
+
+When renewing, give the new snapshot a new name (for example `CQ156AISnap0227`), switch `build-def.json`
+to it only after it's Active, then delete the old one.
 
 ## B. Build the version (20–40 minutes)
 
