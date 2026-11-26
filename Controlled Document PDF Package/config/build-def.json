@@ -1,4 +1,9 @@
 {
   "orgName": "Enablement Document Agent build",
-  "snapshot": "CQ156BaseSnap"
+  "sourceOrg": "00Dfn00000EmbFeEAJ",
+  "features": ["Einstein1AIPlatform"],
+  "settings": {
+    "einsteinGptSettings": { "enableEinsteinGptPlatform": true },
+    "agentPlatformSettings": { "enableAgentPlatform": true }
+  }
 }

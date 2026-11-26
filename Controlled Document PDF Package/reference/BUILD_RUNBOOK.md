@@ -1,5 +1,10 @@
 # Building and releasing a package version (enablement)
 
+> **Nov 25, 2026: build from golden's org shape, not a snapshot.** Salesforce doesn't allow managed
+> package versions built from a snapshot to be promoted. `config/build-def.json` now uses golden's shape
+> (`sourceOrg`) plus Einstein and Agentforce, the same recipe that installed CQ and compiled the code in
+> CQ156AI. Section A (snapshot) is kept only for making CQ 15.6 dev/test orgs.
+
 > **Running this with Claude Code?** Start with `reference/HANDOFF_CLAUDE_CODE.md`. Claude Code also reads
 > `CLAUDE.md`, which replaces this runbook's long `--wait` values with short waits plus status checks
 > (its commands stop after about 10 minutes).
