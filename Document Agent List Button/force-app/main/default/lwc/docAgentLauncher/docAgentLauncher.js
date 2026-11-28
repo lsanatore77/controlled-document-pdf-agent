@@ -6,6 +6,10 @@
  * the user typed it, and returns the user to the list view at once. Nothing is shown unless
  * something goes wrong.
  *
+ * Every click launches: Lightning keeps this page cached in the browser tab and shows the same
+ * component again on the next click, so it launches each time the page becomes the current page
+ * (not only the first time the component loads).
+ *
  * Fast path: the agent's Id is remembered in the browser after the first click, and the
  * open + prompt requests are handed to the panel (which queues them) without waiting for
  * them to finish before going back.
@@ -26,19 +30,52 @@ const DEFAULT_AGENT = 'Controlled_Document_Agent';
 const DEFAULT_PROMPT = 'Create a controlled document from a file';
 const LIST_OBJECT = 'compliancequest__SQX_Controlled_Document__c';
 const CACHE_PREFIX = 'enablement.docAgentLauncher.';
+// Ignore a second page-change signal for the same click (Lightning can send it twice).
+const SAME_CLICK_MS = 1500;
 
 export default class DocAgentLauncher extends NavigationMixin(LightningElement) {
     error;
-    started = false;
     pageState = {};
+    launching = false;
+    lastLaunchAt = 0;
 
     @wire(CurrentPageReference)
     setPageReference(ref) {
-        this.pageState = (ref && ref.state) || {};
-        if (!this.started) {
-            this.started = true;
-            this.launch();
+        if (!this.isThisPage(ref)) {
+            // The user is on another page (for example, back on the list): ready for the next click.
+            this.launching = false;
+            return;
         }
+        this.pageState = ref.state || {};
+        this.start();
+    }
+
+    connectedCallback() {
+        // Shown again from Lightning's cache: launch if this is the current page.
+        if (Object.keys(this.pageState).length || this.lastLaunchAt) {
+            this.start();
+        }
+    }
+
+    disconnectedCallback() {
+        this.launching = false;
+    }
+
+    /** True when the page reference is this launcher's own page. */
+    isThisPage(ref) {
+        const name = ref && ref.attributes && ref.attributes.componentName;
+        return !!name && /docAgentLauncher$/i.test(name);
+    }
+
+    start() {
+        const now = Date.now();
+        if (this.launching || now - this.lastLaunchAt < SAME_CLICK_MS) {
+            return;
+        }
+        this.launching = true;
+        this.lastLaunchAt = now;
+        this.error = undefined;
+        this.launch();
     }
 
     async launch() {
@@ -49,6 +86,7 @@ export default class DocAgentLauncher extends NavigationMixin(LightningElement) 
             const botId = await this.agentId(agentName);
             if (!botId) {
                 this.error = `The agent ${agentName} wasn’t found. Check that it exists and is active.`;
+                this.launching = false;
                 return;
             }
             if (wait) {
@@ -67,6 +105,7 @@ export default class DocAgentLauncher extends NavigationMixin(LightningElement) 
             this.forget(agentName);
             const detail = (e && e.body && e.body.message) || (e && e.message) || String(e);
             this.error = `The Agentforce panel couldn’t be opened: ${detail}`;
+            this.launching = false;
         }
     }
 
@@ -101,6 +140,8 @@ export default class DocAgentLauncher extends NavigationMixin(LightningElement) 
     }
 
     goBack() {
+        // Ready for the next click once we leave this page.
+        this.launching = false;
         // Back to the exact list view the button was clicked on; else the Controlled Documents list.
         if (window.history.length > 1) {
             window.history.back();
